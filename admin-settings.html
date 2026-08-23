@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>性別揭曉派對 - 後台設定</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .settings-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .section-card {
+            background: rgba(255,255,255,0.08);
+            border: 2px solid var(--accent);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: var(--accent);
+            margin-bottom: 15px;
+        }
+        
+        .tier-box {
+            background: rgba(255,255,255,0.05);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid var(--accent);
+        }
+        
+        .input-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .input-row input,
+        .input-row textarea {
+            padding: 10px;
+            border: 1px solid #555;
+            border-radius: 6px;
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            font-size: 0.9rem;
+        }
+        
+        .input-row textarea {
+            grid-column: 1 / -1;
+            min-height: 60px;
+        }
+        
+        .btn-add, .btn-delete, .btn-reset {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .btn-add {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .btn-add:hover {
+            background: #45a049;
+        }
+        
+        .btn-delete {
+            background: #f44336;
+            color: white;
+            padding: 8px 15px;
+        }
+        
+        .btn-delete:hover {
+            background: #da190b;
+        }
+        
+        .btn-reset {
+            background: #ff9800;
+            color: white;
+        }
+        
+        .btn-reset:hover {
+            background: #e68900;
+        }
+        
+        .question-item, .clue-item {
+            background: rgba(255,255,255,0.08);
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .question-text, .clue-text {
+            flex: 1;
+            font-size: 0.9rem;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body>
+    <div class="settings-container">
+        <div class="header">
+            <h1>⚙️ 性別揭曉派對 - 後台設定</h1>
+            <p>派對前期設定：題目、線索、計分等級</p>
+        </div>
+
+        <!-- Game 1 Questions -->
+        <section class="section-card">
+            <div class="section-title">📝 Game 1 題���設定</div>
+            <div id="g1-questions-container" class="loading">載入中...</div>
+            
+            <div class="tier-box">
+                <h4>新增題目</h4>
+                <input type="text" id="g1-q-text" placeholder="題目內容">
+                <div class="input-row">
+                    <input type="text" class="g1-opt-input" placeholder="選項 1">
+                    <input type="text" class="g1-opt-input" placeholder="選項 2">
+                    <input type="text" class="g1-opt-input" placeholder="選項 3">
+                </div>
+                <div class="input-row">
+                    <input type="text" class="g1-opt-input" placeholder="選項 4">
+                    <select id="g1-correct-idx">
+                        <option value="0">正確答案: 1</option>
+                        <option value="1">正確答案: 2</option>
+                        <option value="2">正確答案: 3</option>
+                        <option value="3">正確答案: 4</option>
+                    </select>
+                </div>
+                <button class="btn-add" id="btn-add-g1-q">新增 Game 1 題目</button>
+            </div>
+        </section>
+
+        <!-- Game 2 Clues with Score Tiers -->
+        <section class="section-card">
+            <div class="section-title">🎲 Game 2 線索 & 計分等級</div>
+            <p style="opacity: 0.8; font-size: 0.9rem;">設定最多 3 個等級，玩家達到計分門檻時自動解鎖線索</p>
+            
+            <div id="clues-tiers-container" class="loading">載入中...</div>
+            
+            <div class="tier-box">
+                <h4>新增計分等級 & 線索</h4>
+                <div class="input-row">
+                    <input type="number" id="tier-score" placeholder="計分門檻 (例: 100)" min="0">
+                    <select id="tier-level">
+                        <option value="1">等級 1</option>
+                        <option value="2">等級 2</option>
+                        <option value="3">等級 3</option>
+                    </select>
+                </div>
+                <textarea id="tier-clue-text" placeholder="線索文本（純文字）"></textarea>
+                <div class="input-row">
+                    <input type="text" id="tier-clue-image" placeholder="線索圖片 URL (可選，例: https://... 或 images/clue1.png)">
+                </div>
+                <button class="btn-add" id="btn-add-tier">新增等級</button>
+            </div>
+        </section>
+
+        <!-- Game 3 Questions -->
+        <section class="section-card">
+            <div class="section-title">⚔️ Game 3 搶答題設定</div>
+            <div id="g3-questions-container" class="loading">載入中...</div>
+            
+            <div class="tier-box">
+                <h4>新增搶答題</h4>
+                <input type="text" id="g3-q-text" placeholder="題目內容">
+                <div class="input-row">
+                    <input type="text" class="g3-opt-input" placeholder="選項 1">
+                    <input type="text" class="g3-opt-input" placeholder="選項 2">
+                    <input type="text" class="g3-opt-input" placeholder="選項 3">
+                </div>
+                <div class="input-row">
+                    <input type="text" class="g3-opt-input" placeholder="選項 4">
+                    <select id="g3-correct-idx">
+                        <option value="0">正確答案: 1</option>
+                        <option value="1">正確答案: 2</option>
+                        <option value="2">正確答案: 3</option>
+                        <option value="3">正確答案: 4</option>
+                    </select>
+                </div>
+                <button class="btn-add" id="btn-add-g3-q">新增搶答題</button>
+            </div>
+        </section>
+
+        <!-- Danger Zone -->
+        <section class="section-card" style="border-color: #ff9800;">
+            <div class="section-title" style="color: #ff9800;">🚨 危險區域</div>
+            <p style="color: #ff9800;">清除所有遊戲數據（不可復原）</p>
+            <button class="btn-reset" id="btn-reset-all">🔄 重置所有遊戲數據</button>
+        </section>
+    </div>
+
+    <script type="module" src="js/admin-settings.js"></script>
+</body>
+</html>
