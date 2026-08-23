@@ -3,13 +3,13 @@ import { getDatabase } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-
 
 // TODO: 填入你的 Firebase Config
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-    databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT_ID.appspot.com",
-    messagingSenderId: "XXXXX",
-    appId: "XXXXX"
+  apiKey: "AIzaSyCEqNyvMHsTiGu-8q3WoK1eBHWJaw8KCJA",
+  authDomain: "gender-reveal-party-905de.firebaseapp.com",
+  databaseURL: "https://gender-reveal-party-905de-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "gender-reveal-party-905de",
+  storageBucket: "gender-reveal-party-905de.firebasestorage.app",
+  messagingSenderId: "972856514197",
+  appId: "1:972856514197:web:d18fd6e881e6992bdfad9c"
 };
 
 const app = initializeApp(firebaseConfig);
