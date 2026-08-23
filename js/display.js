@@ -104,8 +104,8 @@ function startDisplayCountdown(startTimestamp, result) {
     }, 200);
 }
 
-// 自動取得當前賓客端 URL（若在 display.html，自動轉為同目錄下的 index.html 或根目錄）
-const guestUrl = window.location.href.replace('display.html', '');
+// 自動取得當前賓客端 URL（若在 display.html，自動轉為 index.html）
+const guestUrl = new URL('index.html', window.location.href).href;
 
 // 自動生成 QR Code
 const qrContainer = document.getElementById("qrcode");
