@@ -5,10 +5,101 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gender Reveal - 後台管理 Console</title>
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        .auth-screen {
+            display: none;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            justify-content: center;
+            align-items: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 9999;
+        }
+        
+        .auth-screen.active {
+            display: flex;
+        }
+        
+        .auth-box {
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+            max-width: 400px;
+        }
+        
+        .auth-box h2 {
+            margin-top: 0;
+            color: #333;
+            font-size: 1.8rem;
+        }
+        
+        .auth-box p {
+            color: #666;
+            margin-bottom: 20px;
+        }
+        
+        .auth-box input {
+            width: 100%;
+            padding: 12px;
+            font-size: 1rem;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            box-sizing: border-box;
+            text-align: center;
+            letter-spacing: 2px;
+        }
+        
+        .auth-box input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .auth-box button {
+            width: 100%;
+            padding: 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .auth-box button:hover {
+            background: #764ba2;
+        }
+        
+        .auth-error {
+            color: #e74c3c;
+            font-size: 0.9rem;
+            margin-top: 10px;
+            display: none;
+        }
+    </style>
 </head>
 <body>
 
-    <div class="admin-container">
+    <!-- 密碼驗證畫面 -->
+    <div class="auth-screen active" id="auth-screen">
+        <div class="auth-box">
+            <h2>🔐 後台管理</h2>
+            <p>請輸入管理員密碼</p>
+            <input type="password" id="password-input" placeholder="輸入密碼" autocomplete="off">
+            <button id="auth-submit">進入後台</button>
+            <div class="auth-error" id="auth-error">❌ 密碼錯誤，請重試</div>
+        </div>
+    </div>
+
+    <!-- 後台管理內容 -->
+    <div class="admin-container" id="admin-content" style="display: none;">
         <div class="header">
             <h1>⚙️ 性別揭曉派對 - 後台 Console</h1>
             <p>實時管理題目、Bingo 線索與現場流程控制</p>
@@ -85,6 +176,53 @@
             <button class="btn-reveal-trigger" id="btn-trigger-reveal">🔥 觸發最終 10 秒倒數 Reveal</button>
         </section>
     </div>
+
+    <script>
+        // 密碼驗證系統
+        const ADMIN_PASSWORD = "1025";
+        
+        function authenticateAdmin() {
+            const password = document.getElementById('password-input').value;
+            const errorMsg = document.getElementById('auth-error');
+            
+            if (password === ADMIN_PASSWORD) {
+                // 密碼正確
+                document.getElementById('auth-screen').classList.remove('active');
+                document.getElementById('admin-content').style.display = 'block';
+                // 儲存驗證狀態到 sessionStorage（重新整理頁面後需要重新輸入密碼）
+                sessionStorage.setItem('adminAuthenticated', 'true');
+            } else {
+                // 密碼錯誤
+                errorMsg.style.display = 'block';
+                document.getElementById('password-input').value = '';
+                document.getElementById('password-input').focus();
+            }
+        }
+        
+        // 頁面載入時檢查驗證狀態
+        window.addEventListener('DOMContentLoaded', () => {
+            const isAuthenticated = sessionStorage.getItem('adminAuthenticated');
+            
+            if (isAuthenticated === 'true') {
+                // 已驗證，顯示後台
+                document.getElementById('auth-screen').classList.remove('active');
+                document.getElementById('admin-content').style.display = 'block';
+            }
+            
+            // 密碼輸入框回車事件
+            document.getElementById('password-input').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    authenticateAdmin();
+                }
+            });
+            
+            // 驗證按鈕點擊事件
+            document.getElementById('auth-submit').addEventListener('click', authenticateAdmin);
+            
+            // 焦點回到密碼輸入框
+            document.getElementById('password-input').focus();
+        });
+    </script>
 
     <script type="module" src="js/admin.js"></script>
 </body>
