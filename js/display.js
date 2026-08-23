@@ -103,3 +103,19 @@ function startDisplayCountdown(startTimestamp, result) {
         }
     }, 200);
 }
+
+// 自動取得當前賓客端 URL（若在 display.html，自動轉為同目錄下的 index.html 或根目錄）
+const guestUrl = window.location.href.replace('display.html', '');
+
+// 自動生成 QR Code
+const qrContainer = document.getElementById("qrcode");
+if (qrContainer && typeof QRCode !== 'undefined') {
+    new QRCode(qrContainer, {
+        text: guestUrl,
+        width: 250,
+        height: 250,
+        colorDark : "#000000",
+        colorLight : "#ffffff",
+        correctLevel : QRCode.CorrectLevel.H
+    });
+}
