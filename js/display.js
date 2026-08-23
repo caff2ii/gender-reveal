@@ -1,11 +1,14 @@
 import { ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 import { db } from "./firebase-config.js";
 
-// 1. 全域關卡同步
+let currentStep = "LOGIN";
+
+// ==================== Global Game State Sync ====================
 onValue(ref(db, 'gameState'), (snapshot) => {
     const data = snapshot.val();
     if (!data) return;
 
+    currentStep = data.currentStep;
     showSection(data.currentStep);
 
     if (data.currentStep === 'REVEAL' && data.startTimestamp) {
@@ -19,42 +22,105 @@ function showSection(step) {
     if (target) target.classList.add('active');
 }
 
-// 2. 監聽入場人數 (LOGIN 階段)
+// ==================== Player Count (LOGIN Stage) ====================
 onValue(ref(db, 'players'), (snapshot) => {
     const count = snapshot.exists() ? Object.keys(snapshot.val()).length : 0;
     const el = document.getElementById('player-count-display');
     if (el) el.innerText = `已入場偵探人數：${count} 人`;
 });
 
-// 3. 監聽陣營比例 (GAME3 階段)
-onValue(ref(db, 'teams'), (snapshot) => {
-    let boyCount = 0;
-    let girlCount = 0;
+// ==================== Dynamic Vote Monitoring Per Game Step ====================
+function updateVotesForStep(step) {
+    const barBoyEl = document.getElementById(`bar-boy-${step.toLowerCase()}`);
+    const barGirlEl = document.getElementById(`bar-girl-${step.toLowerCase()}`);
 
-    if (snapshot.exists()) {
-        const teams = snapshot.val();
-        Object.values(teams).forEach(t => {
-            if (t === 'boy') boyCount++;
-            if (t === 'girl') girlCount++;
-        });
-    }
+    if (!barBoyEl || !barGirlEl) return;
 
-    const total = boyCount + girlCount || 1;
-    const boyPct = Math.round((boyCount / total) * 100);
-    const girlPct = 100 - boyPct;
+    onValue(ref(db, 'players'), (snapshot) => {
+        let boyCount = 0;
+        let girlCount = 0;
 
-    const barBoy = document.getElementById('bar-boy');
-    const barGirl = document.getElementById('bar-girl');
+        if (snapshot.exists()) {
+            snapshot.forEach((child) => {
+                const player = child.val();
+                if (player.votes && player.votes[step]) {
+                    if (player.votes[step] === 'boy') boyCount++;
+                    else if (player.votes[step] === 'girl') girlCount++;
+                }
+            });
+        }
 
-    if (barBoy && barGirl) {
-        barBoy.style.width = `${boyPct}%`;
-        barBoy.innerText = `👦 Team Boy: ${boyCount} (${boyPct}%)`;
-        barGirl.style.width = `${girlPct}%`;
-        barGirl.innerText = `👧 Team Girl: ${girlCount} (${girlPct}%)`;
+        const total = boyCount + girlCount || 1;
+        const boyPct = Math.round((boyCount / total) * 100);
+        const girlPct = 100 - boyPct;
+
+        barBoyEl.style.width = `${boyPct}%`;
+        barBoyEl.innerText = `👦 Team Boy: ${boyCount} (${boyPct}%)`;
+        
+        barGirlEl.style.width = `${girlPct}%`;
+        barGirlEl.innerText = `👧 Team Girl: ${girlCount} (${girlPct}%)`;
+    });
+}
+
+// Monitor votes for all game steps
+onValue(ref(db, 'gameState/currentStep'), (snapshot) => {
+    const step = snapshot.val() || 'LOGIN';
+    if (step === 'GAME1' || step === 'GAME2' || step === 'GAME3') {
+        updateVotesForStep(step);
     }
 });
 
-// 4. 投影幕 10 秒倒數與全螢幕煙花
+updateVotesForStep('GAME1');
+updateVotesForStep('GAME2');
+updateVotesForStep('GAME3');
+
+// ==================== Real-Time Leaderboard ====================
+function updateLeaderboard() {
+    onValue(ref(db, 'players'), (snapshot) => {
+        const container = document.getElementById('leaderboard-display');
+        const players = [];
+
+        if (snapshot.exists()) {
+            snapshot.forEach((child) => {
+                const player = child.val();
+                players.push({
+                    id: child.key,
+                    name: player.name || 'Unknown',
+                    score: player.score || 0
+                });
+            });
+        }
+
+        // Sort by score descending
+        players.sort((a, b) => b.score - a.score);
+
+        // Render leaderboard
+        container.innerHTML = '';
+        players.slice(0, 12).forEach((p, idx) => {
+            const card = document.createElement('div');
+            card.className = 'leaderboard-card';
+            card.innerHTML = `
+                <div class="leaderboard-rank">${idx + 1}</div>
+                <div class="leaderboard-name">${p.name}</div>
+                <div class="leaderboard-score">${p.score} 分</div>
+            `;
+            container.appendChild(card);
+        });
+
+        if (players.length === 0) {
+            container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; opacity: 0.7;">暫無玩家</div>';
+        }
+    });
+}
+
+// Update leaderboard every 1 second during GAME3
+setInterval(() => {
+    if (currentStep === 'GAME3') {
+        updateLeaderboard();
+    }
+}, 1000);
+
+// ==================== Display Countdown & Confetti ====================
 function startDisplayCountdown(startTimestamp, result) {
     const timerEl = document.getElementById('display-countdown');
     const resultEl = document.getElementById('display-result');
@@ -74,7 +140,7 @@ function startDisplayCountdown(startTimestamp, result) {
             resultEl.innerText = isGirl ? "👧 IT'S A GIRL! 🎀" : "👦 IT'S A BOY! 💙";
             resultEl.style.color = isGirl ? "var(--girl-color)" : "var(--boy-color)";
 
-            // 觸發持續性高規格禮炮煙花 (連續 5 秒)
+            // Trigger continuous premium confetti (5 seconds)
             if (typeof confetti === 'function') {
                 const duration = 5 * 1000;
                 const end = Date.now() + duration;
@@ -104,10 +170,9 @@ function startDisplayCountdown(startTimestamp, result) {
     }, 200);
 }
 
-// 自動取得當前賓客端 URL（若在 display.html，自動轉為 index.html）
+// ==================== QR Code Generation ====================
 const guestUrl = new URL('index.html', window.location.href).href;
 
-// 自動生成 QR Code
 const qrContainer = document.getElementById("qrcode");
 if (qrContainer && typeof QRCode !== 'undefined') {
     new QRCode(qrContainer, {
