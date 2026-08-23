@@ -29,6 +29,10 @@ document.getElementById('btn-join-app').onclick = () => {
     player.name = name;
     player.group = group;
     document.getElementById('player-badge').innerText = `偵探：${player.name}`;
+
+    // 👇 【新增這行】將玩家資料寫入 Firebase，讓 display.html 計算入場人數
+    set(ref(db, `players/${player.name}`), { group: player.group, joinedAt: Date.now() });
+
     alert('已成功登入！請等待主持人切換關卡。');
 };
 
@@ -81,6 +85,11 @@ function selectTeam(team) {
     player.team = team;
     document.getElementById('btn-team-boy').classList.toggle('selected', team === 'boy');
     document.getElementById('btn-team-girl').classList.toggle('selected', team === 'girl');
+
+    // 👇 【新增這行】將賓客選擇的陣營寫入 Firebase，讓 display.html 即時拉動比例條
+    if (player.name) {
+        set(ref(db, `teams/${player.name}`), team);
+    }
 }
 
 // 6. 同步倒數與煙花
