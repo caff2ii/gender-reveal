@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gender Reveal - 後台管理 Console</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <div class="admin-container">
+        <div class="header">
+            <h1>⚙️ 性別揭曉派對 - 後台 Console</h1>
+            <p>實時管理題目、Bingo 線索與現場流程控制</p>
+        </div>
+
+        <section class="admin-card">
+            <h2>1. 終極性別設定</h2>
+            <div class="gender-switch">
+                <button id="btn-set-boy" class="btn-boy">👦 設定為 Team Boy</button>
+                <button id="btn-set-girl" class="btn-girl">👧 設定為 Team Girl</button>
+            </div>
+            <p>目前設定性別：<strong id="current-gender-display" style="color:var(--accent);">載入中...</strong></p>
+        </section>
+
+        <section class="admin-card">
+            <h2>2. Friend Groups 管理</h2>
+            <div class="input-inline">
+                <input type="text" id="group-name-input" placeholder="例: 中學同學 GP">
+                <button id="btn-add-group" style="width: 120px;">新增 Group</button>
+            </div>
+            <ul id="group-list" class="data-list"></ul>
+        </section>
+
+        <section class="admin-card">
+            <h2>3. Game 1 題目管理 (專屬題 / 共同題)</h2>
+            <select id="q-group-select">
+                <option value="common">-- 共同題目 --</option>
+            </select>
+            <input type="text" id="g1-q-text" placeholder="輸入題目內容">
+            <input type="text" class="g1-opt-input" placeholder="選項 1 (Index 0)">
+            <input type="text" class="g1-opt-input" placeholder="選項 2 (Index 1)">
+            <input type="text" class="g1-opt-input" placeholder="選項 3 (Index 2)">
+            <input type="text" class="g1-opt-input" placeholder="選項 4 (Index 3)">
+            <div class="input-inline" style="align-items: center;">
+                <label style="white-space: nowrap; font-size: 0.85rem;">正確答案 (0-3):</label>
+                <input type="number" id="g1-correct-idx" min="0" max="3" value="0">
+            </div>
+            <button id="btn-add-g1-q">新增 Game 1 題目</button>
+            <ul id="g1-questions-list" class="data-list"></ul>
+        </section>
+
+        <section class="admin-card">
+            <h2>4. Game 2 Bingo 線索管理 (建議 12-15 條)</h2>
+            <div class="input-inline">
+                <input type="text" id="bingo-item-input" placeholder="例: 媽媽想食辣">
+                <button id="btn-add-bingo" style="width: 120px;">新增線索</button>
+            </div>
+            <ul id="bingo-list" class="data-list"></ul>
+        </section>
+
+        <section class="admin-card">
+            <h2>5. Game 3 搶答題管理 (共 5 題)</h2>
+            <input type="text" id="g3-q-text" placeholder="輸入搶答題目">
+            <input type="text" class="g3-opt-input" placeholder="選項 1">
+            <input type="text" class="g3-opt-input" placeholder="選項 2">
+            <input type="text" class="g3-opt-input" placeholder="選項 3">
+            <input type="text" class="g3-opt-input" placeholder="選項 4">
+            <div class="input-inline" style="align-items: center;">
+                <label style="white-space: nowrap; font-size: 0.85rem;">正確答案 (0-3):</label>
+                <input type="number" id="g3-correct-idx" min="0" max="3" value="0">
+            </div>
+            <button id="btn-add-g3-q">新增 Game 3 搶答題</button>
+            <ul id="g3-questions-list" class="data-list"></ul>
+        </section>
+
+        <section class="admin-card">
+            <h2>🚀 現場關卡控制</h2>
+            <div class="gender-switch" style="grid-template-columns: repeat(2, 1fr);">
+                <button class="step-btn" data-step="LOGIN">1. 切換至 登入頁</button>
+                <button class="step-btn" data-step="GAME1">2. 開始 Game 1</button>
+                <button class="step-btn" data-step="GAME2">3. 開始 Game 2</button>
+                <button class="step-btn" data-step="GAME3">4. 開始 Game 3</button>
+            </div>
+            <button class="btn-reveal-trigger" id="btn-trigger-reveal">🔥 觸發最終 10 秒倒數 Reveal</button>
+        </section>
+    </div>
+
+    <script type="module" src="js/admin.js"></script>
+</body>
+</html>
