@@ -6,9 +6,108 @@
     <title>偵探解密：BB 性別大追查</title>
     <link rel="stylesheet" href="css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+    <style>
+        .player-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .stat {
+            background: rgba(255,255,255,0.1);
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-label {
+            font-size: 0.8rem;
+            opacity: 0.8;
+        }
+        
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--accent);
+        }
+        
+        .clues-section {
+            margin-top: 20px;
+            background: rgba(255,255,255,0.05);
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px dashed var(--accent);
+        }
+        
+        .clue-container {
+            margin: 10px 0;
+            padding: 10px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 6px;
+            text-align: center;
+        }
+        
+        .clue-text {
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+        }
+        
+        .clue-image {
+            max-width: 100%;
+            max-height: 150px;
+            border-radius: 6px;
+            margin-top: 8px;
+        }
+        
+        .locked-clue {
+            opacity: 0.4;
+            filter: blur(3px);
+            text-align: center;
+            color: #999;
+        }
+        
+        .team-selector {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .team-btn {
+            padding: 15px;
+            border: 2px solid #555;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.05);
+            color: #fff;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+        
+        .team-btn.boy {
+            border-color: var(--boy-color);
+        }
+        
+        .team-btn.boy.selected {
+            background: var(--boy-color);
+            color: #000;
+            box-shadow: 0 0 20px rgba(74, 144, 226, 0.5);
+        }
+        
+        .team-btn.girl {
+            border-color: var(--girl-color);
+        }
+        
+        .team-btn.girl.selected {
+            background: var(--girl-color);
+            color: #000;
+            box-shadow: 0 0 20px rgba(245, 166, 35, 0.5);
+        }
+    </style>
 </head>
 <body>
-
     <div class="app-container">
         <div class="header">
             <h1>🕵️‍♂️ BB 性別大追查 🕵️‍♀️</h1>
@@ -19,7 +118,7 @@
             <h2>🕵️‍♂️ 偵探任務簡報</h2>
             <div style="background: rgba(255,255,255,0.08); padding: 15px; border-radius: 12px; text-align: left; font-size: 0.95rem; line-height: 1.6; margin-bottom: 20px; border-left: 4px solid var(--accent);">
                 <p style="margin-bottom: 8px;">大家而家會化身成為一個偵探，參加呢個派對既目標就係去揭破一個驚天大秘密：「BB 既性別」。</p>
-                <p style="margin-bottom: 8px;">係呢個過程入面，你將會受到不同既考驗，鬥智鬥力，最後到達決戰之地，帶住你認為係岩既答案，與共同答案既同伴連成一線，對抗另一隊自認為岩既隊伍。</p>
+                <p style="margin-bottom: 8px;">係呢個過程入面，你將會受到不同既考驗，鬥智鬥力，最後到達決戰之地，帶住你認為係岩既答案，與共同答案既同伴連成一線，對抗[...]</p>
                 <p style="margin-bottom: 0; font-weight: bold; color: var(--accent);">到底係男仔，定係女仔呢？一切一切就等你黎揭曉啦！！！！</p>
             </div>
         
@@ -38,27 +137,79 @@
 
         <section id="step-GAME1" class="view-section">
             <h3>🔍 Game 1：偵探入場券</h3>
+            
+            <div class="player-stats">
+                <div class="stat">
+                    <div class="stat-label">目前計分</div>
+                    <div class="stat-value" id="g1-player-score">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">我的選擇</div>
+                    <div class="stat-value" id="g1-my-choice">-</div>
+                </div>
+            </div>
+
             <div id="g1-container">
                 <p id="g1-q-title" style="font-weight: bold; margin-bottom: 10px;">等待題目中...</p>
                 <div id="g1-opts-box" class="options-grid"></div>
+            </div>
+
+            <div class="clues-section">
+                <h4 style="color: var(--accent); margin-top: 0;">💡 解鎖的線索</h4>
+                <div id="g1-clues-display"></div>
             </div>
         </section>
 
         <section id="step-GAME2" class="view-section">
             <h3>🧩 Game 2：線索 Bingo</h3>
+            
+            <div class="player-stats">
+                <div class="stat">
+                    <div class="stat-label">目前計分</div>
+                    <div class="stat-value" id="g2-player-score">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">我的選擇</div>
+                    <div class="stat-value" id="g2-my-choice">-</div>
+                </div>
+            </div>
+
             <p style="font-size:0.8rem; opacity:0.8;">點擊連成 1 條線以解鎖終極提示！</p>
             <div id="bingo-board-grid" class="bingo-grid"></div>
+
+            <div class="clues-section">
+                <h4 style="color: var(--accent); margin-top: 0;">💡 解鎖的線索</h4>
+                <div id="g2-clues-display"></div>
+            </div>
         </section>
 
         <section id="step-GAME3" class="view-section">
             <h3>⚔️ Game 3：陣營搶答</h3>
+            
+            <div class="player-stats">
+                <div class="stat">
+                    <div class="stat-label">目前計分</div>
+                    <div class="stat-value" id="g3-player-score">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">我的選擇</div>
+                    <div class="stat-value" id="g3-my-choice">-</div>
+                </div>
+            </div>
+
             <div class="team-selector">
                 <button class="team-btn boy" id="btn-team-boy">👦 TEAM BOY</button>
                 <button class="team-btn girl" id="btn-team-girl">👧 TEAM GIRL</button>
             </div>
+            
             <div id="g3-container" style="margin-top: 15px;">
                 <p id="g3-q-title" style="font-weight: bold; margin-bottom: 10px;">等待搶答開始...</p>
                 <div id="g3-opts-box" class="options-grid"></div>
+            </div>
+
+            <div class="clues-section">
+                <h4 style="color: var(--accent); margin-top: 0;">💡 解鎖的線索</h4>
+                <div id="g3-clues-display"></div>
             </div>
         </section>
 
