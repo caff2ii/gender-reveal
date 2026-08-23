@@ -50,9 +50,65 @@
 
         .timer-huge { font-size: 15rem; font-weight: 900; color: var(--accent); line-height: 1; }
         .result-huge { font-size: 6rem; font-weight: 900; display: none; text-shadow: 0 0 30px rgba(255,255,255,0.5); }
-        .team-bar-container { width: 80%; max-width: 900px; display: flex; height: 60px; border-radius: 30px; overflow: hidden; margin-top: 30px; border: 3px solid #fff; }
-        .team-bar-boy { background: var(--boy-color); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: bold; transition: width 0.5s; }
-        .team-bar-girl { background: var(--girl-color); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: bold; transition: width 0.5s; }
+        
+        .vote-bar-container { 
+            width: 80%; max-width: 900px; display: flex; height: 60px; border-radius: 30px; 
+            overflow: hidden; margin-top: 30px; border: 3px solid #fff; 
+        }
+        .team-bar-boy { 
+            background: var(--boy-color); display: flex; align-items: center; justify-content: center; 
+            font-size: 1.5rem; font-weight: bold; transition: width 0.5s; 
+        }
+        .team-bar-girl { 
+            background: var(--girl-color); display: flex; align-items: center; justify-content: center; 
+            font-size: 1.5rem; font-weight: bold; transition: width 0.5s; 
+        }
+
+        .leaderboard-section {
+            width: 90%; max-width: 1000px;
+            background: rgba(0,0,0,0.4);
+            border: 2px solid var(--accent);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 30px;
+        }
+
+        .leaderboard-title {
+            font-size: 1.8rem;
+            color: var(--accent);
+            margin-bottom: 15px;
+        }
+
+        .leaderboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .leaderboard-card {
+            background: rgba(255,255,255,0.08);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #555;
+        }
+
+        .leaderboard-rank {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--accent);
+        }
+
+        .leaderboard-name {
+            font-size: 1.2rem;
+            margin: 10px 0;
+        }
+
+        .leaderboard-score {
+            font-size: 1.5rem;
+            color: #4CAF50;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -67,7 +123,7 @@
             <div class="login-layout">
                 <div class="story-box">
                     <p>大家而家會化身成為一個偵探，參加呢個派對既目標就係去揭破一個驚天大秘密：「BB 既性別」。</p>
-                    <p>係呢個過程入面，你將會受到不同既考驗，鬥智鬥力，最後到達決戰之地，帶住你認為係岩既答案，與共同答案既同伴連成一線，對抗另一隊自認為岩既隊伍。</p>
+                    <p>係呢個過程入面，你將會受到不同既考驗，鬥智鬥力，最後到達決戰之地，帶住你認為係岩既答案，與共同答案既同伴連成一線，對抗[...]</p>
                     <p>到底係男仔，定係女仔呢？一切一切就等你黎揭曉啦！！！！</p>
                 </div>
 
@@ -83,20 +139,36 @@
         <section id="step-GAME1" class="view-section">
             <h1 class="display-title">🔍 Game 1：偵探入場券</h1>
             <p class="display-subtitle">請在手機上回答專屬問題！</p>
+            <div class="vote-bar-container">
+                <div id="bar-boy-g1" class="team-bar-boy" style="width: 50%;">👦 Team Boy: 0</div>
+                <div id="bar-girl-g1" class="team-bar-girl" style="width: 50%;">👧 Team Girl: 0</div>
+            </div>
         </section>
 
         <!-- GAME2 階段 -->
         <section id="step-GAME2" class="view-section">
             <h1 class="display-title">🧩 Game 2：線索 Bingo 進行中</h1>
             <p class="display-subtitle">尋找現場線索，率先連成 1 條線！</p>
+            <div class="vote-bar-container">
+                <div id="bar-boy-g2" class="team-bar-boy" style="width: 50%;">👦 Team Boy: 0</div>
+                <div id="bar-girl-g2" class="team-bar-girl" style="width: 50%;">👧 Team Girl: 0</div>
+            </div>
         </section>
 
         <!-- GAME3 階段 -->
         <section id="step-GAME3" class="view-section">
             <h1 class="display-title">⚔️ Game 3：陣營對決與搶答</h1>
-            <div class="team-bar-container">
-                <div id="bar-boy" class="team-bar-boy" style="width: 50%;">👦 Team Boy: 0</div>
-                <div id="bar-girl" class="team-bar-girl" style="width: 50%;">👧 Team Girl: 0</div>
+            <div class="vote-bar-container">
+                <div id="bar-boy-g3" class="team-bar-boy" style="width: 50%;">👦 Team Boy: 0</div>
+                <div id="bar-girl-g3" class="team-bar-girl" style="width: 50%;">👧 Team Girl: 0</div>
+            </div>
+
+            <!-- Leaderboard during Game 3 -->
+            <div class="leaderboard-section">
+                <div class="leaderboard-title">🏆 實時排行榜</div>
+                <div class="leaderboard-grid" id="leaderboard-display">
+                    <div style="grid-column: 1/-1; text-align: center; opacity: 0.7;">載入中...</div>
+                </div>
             </div>
         </section>
 
