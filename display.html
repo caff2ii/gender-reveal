@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gender Reveal - 現場投影大螢幕</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+    <style>
+        /* 投影專用大字體與全螢幕樣式 */
+        body { padding: 0; overflow: hidden; background: #0f0f13; }
+        .display-container {
+            width: 100vw; height: 100vh; max-width: none; border-radius: 0;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
+        }
+        .display-title { font-size: 3rem; color: var(--accent); margin-bottom: 20px; }
+        .display-subtitle { font-size: 1.8rem; opacity: 0.9; margin-bottom: 40px; }
+        .timer-huge { font-size: 15rem; font-weight: 900; color: var(--accent); line-height: 1; }
+        .result-huge { font-size: 6rem; font-weight: 900; display: none; text-shadow: 0 0 30px rgba(255,255,255,0.5); }
+        .team-bar-container { width: 80%; max-width: 900px; display: flex; height: 60px; border-radius: 30px; overflow: hidden; margin-top: 30px; border: 3px solid #fff; }
+        .team-bar-boy { background: var(--boy-color); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: bold; transition: width 0.5s; }
+        .team-bar-girl { background: var(--girl-color); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: bold; transition: width 0.5s; }
+    </style>
+</head>
+<body>
+
+    <div class="display-container">
+        
+        <!-- LOGIN 階段 -->
+        <section id="step-LOGIN" class="view-section active">
+            <h1 class="display-title">🕵️‍♂️ 性別大追查：賓客入場中 🕵️‍♀️</h1>
+            <p class="display-subtitle">請掃描現場 QR Code 進入手機端完成登記</p>
+            <div id="player-count-display" style="font-size: 2.5rem; color: var(--accent);">已入場偵探人數：0 人</div>
+        </section>
+
+        <!-- GAME1 階段 -->
+        <section id="step-GAME1" class="view-section">
+            <h1 class="display-title">🔍 Game 1：偵探入場券</h1>
+            <p class="display-subtitle">請在手機上回答專屬問題！</p>
+        </section>
+
+        <!-- GAME2 階段 -->
+        <section id="step-GAME2" class="view-section">
+            <h1 class="display-title">🧩 Game 2：線索 Bingo 進行中</h1>
+            <p class="display-subtitle">尋找現場線索，率先連成 1 條線！</p>
+        </section>
+
+        <!-- GAME3 階段 -->
+        <section id="step-GAME3" class="view-section">
+            <h1 class="display-title">⚔️ Game 3：陣營對決與搶答</h1>
+            <div class="team-bar-container">
+                <div id="bar-boy" class="team-bar-boy" style="width: 50%;">👦 Team Boy: 0</div>
+                <div id="bar-girl" class="team-bar-girl" style="width: 50%;">👧 Team Girl: 0</div>
+            </div>
+        </section>
+
+        <!-- REVEAL 階段 -->
+        <section id="step-REVEAL" class="view-section">
+            <div id="display-countdown" class="timer-huge">10</div>
+            <div id="display-result" class="result-huge"></div>
+        </section>
+
+    </div>
+
+    <script type="module" src="js/display.js"></script>
+</body>
+</html>
