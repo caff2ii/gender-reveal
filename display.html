@@ -146,39 +146,34 @@
                 <h2 id="g1-display-q-title" style="color: var(--accent); margin-bottom: 18px; font-size: 2rem;"></h2>
                 <div id="g1-display-q-opts" style="font-size: 1.5rem; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; text-align: left;"></div>
             </div>
-
-            <div class="vote-bar-container" style="margin-top: 20px;">
-                <div id="bar-boy-g1" class="team-bar-boy" style="width: 50%;">👦 Team Boy: 0</div>
-                <div id="bar-girl-g1" class="team-bar-girl" style="width: 50%;">👧 Team Girl: 0</div>
-            </div>
         </section>
 
         <!-- GAME2 階段 -->
         <section id="step-GAME2" class="view-section">
             <h1 class="display-title">🧩 Game 2：線索 Bingo 進行中</h1>
             <p class="display-subtitle">尋找現場線索，率先連成 1 條線！</p>
-            <div class="vote-bar-container">
-                <div id="bar-boy-g2" class="team-bar-boy" style="width: 50%;">👦 Team Boy: 0</div>
-                <div id="bar-girl-g2" class="team-bar-girl" style="width: 50%;">👧 Team Girl: 0</div>
-            </div>
         </section>
 
         <!-- GAME3 階段 -->
         <section id="step-GAME3" class="view-section">
             <h1 class="display-title">⚔️ Game 3：陣營對決與搶答</h1>
-            <div class="vote-bar-container">
-                <div id="bar-boy-g3" class="team-bar-boy" style="width: 50%;">👦 Team Boy: 0</div>
-                <div id="bar-girl-g3" class="team-bar-girl" style="width: 50%;">👧 Team Girl: 0</div>
-            </div>
+        </section>
 
-            <!-- Leaderboard during Game 3 -->
+        <!-- 全域統計：投票比例 + 排行榜（Game 進行中顯示）-->
+        <div id="global-stats" style="display: none; width: 90%; max-width: 1100px;">
+            <div class="vote-bar-container" style="margin-top: 0;">
+                <div id="bar-boy-global" class="team-bar-boy" style="width: 50%;">👦 Team Boy: 0</div>
+                <div id="bar-girl-global" class="team-bar-girl" style="width: 50%;">👧 Team Girl: 0</div>
+            </div>
+            <div id="participation-display" style="font-size: 1.4rem; color: var(--accent); margin-top: 10px;"></div>
+
             <div class="leaderboard-section">
                 <div class="leaderboard-title">🏆 實時排行榜</div>
                 <div class="leaderboard-grid" id="leaderboard-display">
                     <div style="grid-column: 1/-1; text-align: center; opacity: 0.7;">載入中...</div>
                 </div>
             </div>
-        </section>
+        </div>
 
         <!-- REVEAL 階段 -->
         <section id="step-REVEAL" class="view-section">

@@ -139,147 +139,20 @@ onValue(ref(db, 'settings/finalGender'), (snapshot) => {
     console.error('載入性別狀態失敗:', error);
 });
 
-// ==================== Vote Monitor ====================
-function updateVoteRatio() {
-    onValue(ref(db, `players`), (snapshot) => {
-        let boyCount = 0;
-        let girlCount = 0;
-
-        if (snapshot.exists()) {
-            snapshot.forEach((child) => {
-                const player = child.val();
-                if (player.votes && player.votes[currentStep]) {
-                    if (player.votes[currentStep] === 'boy') boyCount++;
-                    else if (player.votes[currentStep] === 'girl') girlCount++;
-                }
-            });
-        }
-
-        const total = boyCount + girlCount || 1;
-        const boyPct = Math.round((boyCount / total) * 100);
-        const girlPct = 100 - boyPct;
-
-        document.getElementById('boy-count').innerText = boyCount;
-        document.getElementById('girl-count').innerText = girlCount;
-
-        document.getElementById('vote-boy-display').style.flex = boyPct;
-        document.getElementById('vote-boy-display').innerText = `👦 ${boyCount} (${boyPct}%)`;
-
-        document.getElementById('vote-girl-display').style.flex = girlPct;
-        document.getElementById('vote-girl-display').innerText = `👧 ${girlCount} (${girlPct}%)`;
-    });
-}
-
-// Update vote ratio when step changes
-onValue(ref(db, 'gameState/currentStep'), () => {
-    updateVoteRatio();
-});
-
-updateVoteRatio();
-
-// ==================== Leaderboard ====================
-function updateLeaderboard() {
-    onValue(ref(db, 'players'), (snapshot) => {
-        const container = document.getElementById('leaderboard-container');
-        const players = [];
-
-        if (snapshot.exists()) {
-            snapshot.forEach((child) => {
-                const player = child.val();
-                players.push({
-                    id: child.key,
-                    name: player.name || 'Unknown',
-                    score: player.score || 0
-                });
-            });
-        }
-
-        // Sort by score descending
-        players.sort((a, b) => b.score - a.score);
-
-        // Populate select dropdown
-        const playerSelect = document.getElementById('player-select');
-        playerSelect.innerHTML = '<option value="">-- 選擇玩家 --</option>';
-        players.forEach(p => {
-            const opt = document.createElement('option');
-            opt.value = p.id;
-            opt.innerText = `${p.name} (${p.score})`;
-            playerSelect.appendChild(opt);
-        });
-
-        // Render leaderboard
-        container.innerHTML = '';
-        players.forEach((p, idx) => {
-            const item = document.createElement('div');
-            item.className = 'leaderboard-item';
-            item.innerHTML = `
-                <div class="leaderboard-rank">${idx + 1}</div>
-                <div class="leaderboard-name">${p.name}</div>
-                <div class="leaderboard-score">${p.score} 分</div>
-            `;
-            container.appendChild(item);
-        });
-
-        if (players.length === 0) {
-            container.innerHTML = '<div style="text-align: center; opacity: 0.7;">暫無玩家</div>';
-        }
-    });
-}
-
-updateLeaderboard();
-
-// ==================== Score Management ====================
-document.getElementById('btn-add-score').addEventListener('click', async () => {
-    const playerId = document.getElementById('player-select').value;
-    const amount = parseInt(document.getElementById('score-amount').value) || 0;
-
-    if (!playerId) {
-        alert('請選擇玩家');
-        return;
-    }
-
-    if (amount === 0) {
-        alert('請輸入分數');
-        return;
-    }
+// ==================== Testing Reset ====================
+document.getElementById('btn-reset-testing').addEventListener('click', async () => {
+    const confirmed = confirm('⚠️ 確認要重置遊戲數據？（測試用）\n\n玩家數據、分數、投票會被清除；題目、線索會保留。');
+    if (!confirmed) return;
 
     try {
-        const snapshot = await get(ref(db, `players/${playerId}/score`));
-        const currentScore = snapshot.val() || 0;
-        const newScore = currentScore + amount;
+        // 只清除玩家數據同遊戲狀態；題目、線索保留
+        await set(ref(db, 'players'), {});
+        await set(ref(db, 'gameState'), { currentStep: 'LOGIN' });
         
-        await set(ref(db, `players/${playerId}/score`), newScore);
-        document.getElementById('score-amount').value = '';
-        alert(`✅ 已添加 ${amount} 分`);
+        alert('✅ 已重置玩家數據並返回登入階段（題目、線索已保留）');
     } catch (error) {
-        alert('添加分數失敗: ' + error.message);
-    }
-});
-
-document.getElementById('btn-sub-score').addEventListener('click', async () => {
-    const playerId = document.getElementById('player-select').value;
-    const amount = parseInt(document.getElementById('score-amount').value) || 0;
-
-    if (!playerId) {
-        alert('請選擇玩家');
-        return;
-    }
-
-    if (amount === 0) {
-        alert('請輸入分數');
-        return;
-    }
-
-    try {
-        const snapshot = await get(ref(db, `players/${playerId}/score`));
-        const currentScore = snapshot.val() || 0;
-        const newScore = Math.max(0, currentScore - amount);
-        
-        await set(ref(db, `players/${playerId}/score`), newScore);
-        document.getElementById('score-amount').value = '';
-        alert(`✅ 已扣除 ${amount} 分`);
-    } catch (error) {
-        alert('扣除分數失敗: ' + error.message);
+        console.error('重置失敗:', error);
+        alert('重置失敗: ' + error.message);
     }
 });
 

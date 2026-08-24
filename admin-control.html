@@ -9,10 +9,10 @@
     <style>
         .control-dashboard {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1fr;
             gap: 20px;
             padding: 20px;
-            max-width: 1400px;
+            max-width: 640px;
             margin: 0 auto;
         }
         
@@ -267,47 +267,15 @@
                 </p>
             </div>
 
-            <!-- Score Management -->
+            <!-- Testing Reset -->
             <div class="dashboard-card" style="margin-top: 20px;">
-                <div class="card-title">📊 手動調整計分</div>
-                <div class="score-editor">
-                    <select id="player-select">
-                        <option value="">-- 選擇玩家 --</option>
-                    </select>
-                    <input type="number" id="score-amount" placeholder="分數" min="-1000" max="1000">
-                    <button id="btn-add-score">加分</button>
-                    <button id="btn-sub-score" style="background: #f44336;">扣分</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Right Column: Vote Monitor & Leaderboard -->
-        <div>
-            <!-- Vote Ratio Monitor -->
-            <div class="dashboard-card">
-                <div class="card-title">🗳️ 投票比例 (現階段)</div>
-                <div class="vote-bar">
-                    <div class="vote-boy" id="vote-boy-display" style="flex: 50%;">👦 0 (0%)</div>
-                    <div class="vote-girl" id="vote-girl-display" style="flex: 50%;">👧 0 (0%)</div>
-                </div>
-                <div class="stats">
-                    <div class="stat-box">
-                        <div class="stat-label">男寶寶投票</div>
-                        <div class="stat-value" id="boy-count">0</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="stat-label">女寶寶投票</div>
-                        <div class="stat-value" id="girl-count">0</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Leaderboard -->
-            <div class="dashboard-card" style="margin-top: 20px;">
-                <div class="card-title">🏆 實時排行榜</div>
-                <div class="leaderboard" id="leaderboard-container">
-                    <div style="text-align: center; opacity: 0.7;">載入中...</div>
-                </div>
+                <div class="card-title">🔄 測試重置</div>
+                <p style="font-size: 0.8rem; opacity: 0.6; text-align: center; margin-bottom: 10px;">
+                    清除玩家數據、分數、投票並返回登入階段；題目、線索會保留（測試用）
+                </p>
+                <button id="btn-reset-testing" style="width:100%; padding:15px; background:#f44336; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">
+                    🔄 重置所有遊戲數據
+                </button>
             </div>
         </div>
     </div>

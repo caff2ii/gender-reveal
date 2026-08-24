@@ -467,22 +467,19 @@ loadG3Questions();
 
 // ==================== Reset All Data ====================
 document.getElementById('btn-reset-all').addEventListener('click', async () => {
-    const confirmed = confirm('⚠️ 確認要清除所有遊戲數據？此操作不可復原！');
+    const confirmed = confirm('⚠️ 確認要重置遊戲數據？此操作不可復原！\n\n玩家數據、分數、投票、性別設定會被清除；題目、線索會保留。');
     if (!confirmed) return;
 
-    const confirmed2 = confirm('🚨 再次確認清除？所有玩家數據、分數、投票都會被刪除！');
+    const confirmed2 = confirm('🚨 再次確認？');
     if (!confirmed2) return;
 
     try {
+        // 只清除玩家數據、遊戲狀態同性別設定；題目、線索保留
         await set(ref(db, 'players'), {});
         await set(ref(db, 'gameState'), { currentStep: 'LOGIN' });
-        await set(ref(db, 'game1Questions'), {});
-        await set(ref(db, 'game3Questions'), {});
-        await set(ref(db, 'bingoItems'), {});
-        await set(ref(db, 'gameConfig/clues'), {});
         await set(ref(db, 'settings/finalGender'), null);
         
-        alert('✅ 所有遊戲數據已重置');
+        alert('✅ 已重置遊戲數據（題目、線索已保留）');
     } catch (error) {
         console.error('重置失敗:', error);
         alert('重置失敗: ' + error.message);

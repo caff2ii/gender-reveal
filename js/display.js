@@ -29,38 +29,99 @@ onValue(ref(db, 'players'), (snapshot) => {
     if (el) el.innerText = `已入場偵探人數：${count} 人`;
 });
 
-// ==================== Dynamic Vote Monitoring Per Game Step ====================
-function updateVotesForStep(step) {
-    const barBoyEl = document.getElementById(`bar-boy-${step.toLowerCase()}`);
-    const barGirlEl = document.getElementById(`bar-girl-${step.toLowerCase()}`);
+// ==================== 全域統計：投票比例 + 排行榜（Game 進行中顯示於大螢幕）====================
+const GAME_STEPS = ['GAME1', 'GAME2', 'GAME3'];
+let latestPlayersSnapshot = null;
 
-    if (!barBoyEl || !barGirlEl) return;
+function hasAnsweredStep(votes, step) {
+    if (!votes) return false;
+    if (step === 'GAME1') {
+        return votes['GAME1'] !== undefined || votes['GAME1_GROUP'] !== undefined;
+    }
+    if (step === 'GAME2') {
+        return Object.keys(votes).some(k => k.startsWith('GAME2_'));
+    }
+    return votes[step] !== undefined;
+}
 
-    onValue(ref(db, 'players'), (snapshot) => {
-        let boyCount = 0;
-        let girlCount = 0;
+function renderGlobalStats() {
+    const globalStats = document.getElementById('global-stats');
+    const barBoy = document.getElementById('bar-boy-global');
+    const barGirl = document.getElementById('bar-girl-global');
+    const participationEl = document.getElementById('participation-display');
 
-        if (snapshot.exists()) {
-            snapshot.forEach((child) => {
-                const player = child.val();
-                if (player.votes && player.votes[step]) {
-                    if (player.votes[step] === 'boy') boyCount++;
-                    else if (player.votes[step] === 'girl') girlCount++;
-                }
-            });
+    // 只喺 Game 進行中顯示
+    const showStats = GAME_STEPS.includes(currentStep);
+    if (globalStats) globalStats.style.display = showStats ? '' : 'none';
+    if (!showStats || !latestPlayersSnapshot) return;
+
+    let boyCount = 0, girlCount = 0, totalPlayers = 0, answered = 0;
+
+    latestPlayersSnapshot.forEach((child) => {
+        totalPlayers++;
+        const player = child.val();
+        if (hasAnsweredStep(player.votes, currentStep)) answered++;
+
+        if (currentStep === 'GAME3' && player.votes && player.votes['GAME3']) {
+            if (player.votes['GAME3'] === 'boy') boyCount++;
+            else if (player.votes['GAME3'] === 'girl') girlCount++;
         }
+    });
 
+    if (currentStep === 'GAME3') {
+        // Game 3：顯示男/女陣營投票比例
         const total = boyCount + girlCount || 1;
         const boyPct = Math.round((boyCount / total) * 100);
-        const girlPct = 100 - boyPct;
-
-        barBoyEl.style.width = `${boyPct}%`;
-        barBoyEl.innerText = `👦 Team Boy: ${boyCount} (${boyPct}%)`;
-        
-        barGirlEl.style.width = `${girlPct}%`;
-        barGirlEl.innerText = `👧 Team Girl: ${girlCount} (${girlPct}%)`;
-    });
+        barBoy.style.width = `${boyPct}%`;
+        barBoy.innerText = `👦 Team Boy: ${boyCount} (${boyPct}%)`;
+        barGirl.style.width = `${100 - boyPct}%`;
+        barGirl.innerText = `👧 Team Girl: ${girlCount} (${100 - boyPct}%)`;
+        if (participationEl) participationEl.innerText = '';
+    } else {
+        // Game 1/2：顯示作答進度
+        barBoy.style.width = '50%';
+        barBoy.innerText = '👦 Team Boy';
+        barGirl.style.width = '50%';
+        barGirl.innerText = '👧 Team Girl';
+        if (participationEl) participationEl.innerText = `📝 已回答人數：${answered} / ${totalPlayers}`;
+    }
 }
+
+function renderLeaderboard() {
+    const container = document.getElementById('leaderboard-display');
+    if (!container || !latestPlayersSnapshot) return;
+
+    const players = [];
+    latestPlayersSnapshot.forEach((child) => {
+        const player = child.val();
+        players.push({ name: player.name || 'Unknown', score: player.score || 0 });
+    });
+    players.sort((a, b) => b.score - a.score);
+
+    container.innerHTML = '';
+    players.slice(0, 10).forEach((p, idx) => {
+        const card = document.createElement('div');
+        card.className = 'leaderboard-card';
+        card.innerHTML = `
+            <div class="leaderboard-rank">${idx + 1}</div>
+            <div class="leaderboard-name">${p.name}</div>
+            <div class="leaderboard-score">${p.score} 分</div>
+        `;
+        container.appendChild(card);
+    });
+
+    if (players.length === 0) {
+        container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; opacity: 0.7;">暫無玩家</div>';
+    }
+}
+
+onValue(ref(db, 'players'), (snapshot) => {
+    latestPlayersSnapshot = snapshot;
+    renderGlobalStats();
+    renderLeaderboard();
+}, (error) => {
+    console.error('載入玩家數據失敗:', error);
+});
 
 // ==================== GAME1 兩階段顯示（Group 專屬題 → 共同題）====================
 let g1DisplayPhase = 'GROUP';
@@ -130,63 +191,10 @@ onValue(ref(db, 'gameState/game1ActiveQ'), (snap) => {
     renderG1Display();
 });
 
-// Monitor votes for all game steps
-onValue(ref(db, 'gameState/currentStep'), (snapshot) => {
-    const step = snapshot.val() || 'LOGIN';
-    if (step === 'GAME1' || step === 'GAME2' || step === 'GAME3') {
-        updateVotesForStep(step);
-    }
+// 階段切換時更新全域統計顯示
+onValue(ref(db, 'gameState/currentStep'), () => {
+    renderGlobalStats();
 });
-
-updateVotesForStep('GAME1');
-updateVotesForStep('GAME2');
-updateVotesForStep('GAME3');
-
-// ==================== Real-Time Leaderboard ====================
-function updateLeaderboard() {
-    onValue(ref(db, 'players'), (snapshot) => {
-        const container = document.getElementById('leaderboard-display');
-        const players = [];
-
-        if (snapshot.exists()) {
-            snapshot.forEach((child) => {
-                const player = child.val();
-                players.push({
-                    id: child.key,
-                    name: player.name || 'Unknown',
-                    score: player.score || 0
-                });
-            });
-        }
-
-        // Sort by score descending
-        players.sort((a, b) => b.score - a.score);
-
-        // Render leaderboard
-        container.innerHTML = '';
-        players.slice(0, 12).forEach((p, idx) => {
-            const card = document.createElement('div');
-            card.className = 'leaderboard-card';
-            card.innerHTML = `
-                <div class="leaderboard-rank">${idx + 1}</div>
-                <div class="leaderboard-name">${p.name}</div>
-                <div class="leaderboard-score">${p.score} 分</div>
-            `;
-            container.appendChild(card);
-        });
-
-        if (players.length === 0) {
-            container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; opacity: 0.7;">暫無玩家</div>';
-        }
-    });
-}
-
-// Update leaderboard every 1 second during GAME3
-setInterval(() => {
-    if (currentStep === 'GAME3') {
-        updateLeaderboard();
-    }
-}, 1000);
 
 // ==================== Display Countdown & Confetti ====================
 function startDisplayCountdown(startTimestamp, result) {
