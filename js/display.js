@@ -62,6 +62,74 @@ function updateVotesForStep(step) {
     });
 }
 
+// ==================== GAME1 兩階段顯示（Group 專屬題 → 共同題）====================
+let g1DisplayPhase = 'GROUP';
+let g1DisplayCommonData = {};
+let g1DisplayActiveId = null;
+
+function renderG1Display() {
+    const subtitle = document.getElementById('g1-display-subtitle');
+    const progressEl = document.getElementById('g1-group-progress');
+    const qBox = document.getElementById('g1-display-question');
+
+    if (g1DisplayPhase === 'COMMON') {
+        if (subtitle) subtitle.innerText = '請睇住大螢幕題目，喺自己手機選擇答案！';
+        if (progressEl) progressEl.style.display = 'none';
+        if (qBox) qBox.style.display = 'block';
+
+        const titleEl = document.getElementById('g1-display-q-title');
+        const optsEl = document.getElementById('g1-display-q-opts');
+        const q = g1DisplayActiveId ? g1DisplayCommonData[g1DisplayActiveId] : null;
+
+        if (titleEl && optsEl) {
+            if (q) {
+                titleEl.innerText = q.question;
+                optsEl.innerHTML = q.options
+                    .map((o, i) => `<div>${i + 1}. ${o}</div>`)
+                    .join('');
+            } else {
+                titleEl.innerText = '暫無共同題目';
+                optsEl.innerHTML = '';
+            }
+        }
+    } else {
+        if (subtitle) subtitle.innerText = '各 Group 專屬問答進行中，請睇自己手機作答！';
+        if (progressEl) progressEl.style.display = '';
+        if (qBox) qBox.style.display = 'none';
+    }
+}
+
+onValue(ref(db, 'gameState/game1Phase'), (phaseSnap) => {
+    g1DisplayPhase = phaseSnap.val() || 'GROUP';
+    renderG1Display();
+});
+
+// Group 階段進度：已完成專屬題人數
+onValue(ref(db, 'players'), (snap) => {
+    let total = 0;
+    let answered = 0;
+    if (snap.exists()) {
+        snap.forEach((child) => {
+            total++;
+            const v = child.val().votes;
+            if (v && v['GAME1_GROUP'] !== undefined) answered++;
+        });
+    }
+    const el = document.getElementById('g1-group-progress');
+    if (el) el.innerText = `已完成專屬題：${answered} / ${total} 人`;
+});
+
+// 共同題資料 + 當前生效題目 id
+onValue(ref(db, 'game1Questions/common'), (snap) => {
+    g1DisplayCommonData = snap.exists() ? snap.val() : {};
+    renderG1Display();
+});
+
+onValue(ref(db, 'gameState/game1ActiveQ'), (snap) => {
+    g1DisplayActiveId = snap.val();
+    renderG1Display();
+});
+
 // Monitor votes for all game steps
 onValue(ref(db, 'gameState/currentStep'), (snapshot) => {
     const step = snapshot.val() || 'LOGIN';

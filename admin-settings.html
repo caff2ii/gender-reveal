@@ -152,6 +152,13 @@
             opacity: 1;
         }
         
+        .g1-group-header {
+            font-weight: bold;
+            color: var(--accent);
+            font-size: 0.85rem;
+            margin: 12px 0 6px;
+        }
+        
         .loading {
             text-align: center;
             padding: 20px;
@@ -188,6 +195,16 @@
             <div class="tier-box">
                 <h4>新增題目</h4>
                 <input type="text" id="g1-q-text" class="form-input" placeholder="題目內容">
+                <div class="input-row input-row-2col">
+                    <select id="g1-q-type">
+                        <option value="common">🌐 共同題（所有人）</option>
+                        <option value="group">👥 Group 專屬題（指定 Group）</option>
+                    </select>
+                </div>
+                <div class="input-row" id="g1-group-row" style="display: none;">
+                    <input type="text" id="g1-q-group" class="form-input" style="margin-bottom: 0;" list="group-options" placeholder="輸入或選擇 Group 名稱（須與玩家所選 Group 相同）">
+                    <datalist id="group-options"></datalist>
+                </div>
                 <div class="input-row">
                     <input type="text" class="g1-opt-input" placeholder="選項 1">
                     <input type="text" class="g1-opt-input" placeholder="選項 2">

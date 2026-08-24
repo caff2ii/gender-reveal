@@ -115,7 +115,16 @@ onValue(ref(db, 'gameState/currentStep'), (snapshot) => {
 document.querySelectorAll('.step-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
         try {
-            await set(ref(db, 'gameState/currentStep'), btn.dataset.step);
+            if (btn.dataset.step === 'GAME1') {
+                // 進入 Game 1 時重置為 Group 專屬題階段
+                await update(ref(db, 'gameState'), {
+                    currentStep: 'GAME1',
+                    game1Phase: 'GROUP',
+                    game1ActiveQ: null
+                });
+            } else {
+                await set(ref(db, 'gameState/currentStep'), btn.dataset.step);
+            }
         } catch (error) {
             console.error('Error updating step:', error);
             alert('更新失敗: ' + error.message);

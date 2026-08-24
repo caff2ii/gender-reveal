@@ -138,8 +138,16 @@
         <!-- GAME1 階段 -->
         <section id="step-GAME1" class="view-section">
             <h1 class="display-title">🔍 Game 1：偵探入場券</h1>
-            <p class="display-subtitle">請在手機上回答專屬問題！</p>
-            <div class="vote-bar-container">
+            <p class="display-subtitle" id="g1-display-subtitle">各 Group 專屬問答進行中，請睇自己手機作答！</p>
+            <div id="g1-group-progress" style="font-size: 1.6rem; color: var(--accent); margin: 10px 0;">已完成專屬題：0 / 0 人</div>
+
+            <!-- 共同題階段：大螢幕顯示題目 -->
+            <div id="g1-display-question" style="display: none; background: rgba(255,255,255,0.08); border-radius: 16px; padding: 24px; margin-top: 10px;">
+                <h2 id="g1-display-q-title" style="color: var(--accent); margin-bottom: 18px; font-size: 2rem;"></h2>
+                <div id="g1-display-q-opts" style="font-size: 1.5rem; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; text-align: left;"></div>
+            </div>
+
+            <div class="vote-bar-container" style="margin-top: 20px;">
                 <div id="bar-boy-g1" class="team-bar-boy" style="width: 50%;">👦 Team Boy: 0</div>
                 <div id="bar-girl-g1" class="team-bar-girl" style="width: 50%;">👧 Team Girl: 0</div>
             </div>

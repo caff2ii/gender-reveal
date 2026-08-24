@@ -152,45 +152,132 @@ function monitorPlayerScore() {
     });
 }
 
-// ==================== Game 1: Quiz Voting ====================
-function loadGame1Question() {
-    onValue(ref(db, 'game1Questions/common'), (snapshot) => {
-        const container = document.getElementById('g1-opts-box');
-        container.innerHTML = '';
+// ==================== Game 1: Quiz Voting（兩階段：Group 專屬題 → 共同題）====================
+let g1Phase = 'GROUP';
+let g1QuestionsData = {};
+let g1ActiveQId = null;
+let g1GroupQCache = null;   // 快取本機揀選嘅 Group 題 id，避免資料更新時題目跳來跳去
+let g1ListenersReady = false;
 
-        if (!snapshot.exists()) {
-            container.innerHTML = '<p style="opacity: 0.7;">暫無題目</p>';
+function loadGame1Question() {
+    if (!g1ListenersReady) {
+        g1ListenersReady = true;
+
+        onValue(ref(db, 'gameState/game1Phase'), (snap) => {
+            const newPhase = snap.val() || 'GROUP';
+            if (newPhase !== g1Phase) g1GroupQCache = null;
+            g1Phase = newPhase;
+            renderG1();
+        });
+
+        onValue(ref(db, 'game1Questions'), (snap) => {
+            g1QuestionsData = snap.exists() ? snap.val() : {};
+            renderG1();
+        });
+
+        onValue(ref(db, 'gameState/game1ActiveQ'), (snap) => {
+            g1ActiveQId = snap.val();
+            renderG1();
+        });
+    }
+    renderG1();
+}
+
+function renderG1() {
+    if (currentStep !== 'GAME1') return;
+
+    const container = document.getElementById('g1-opts-box');
+    const titleEl = document.getElementById('g1-q-title');
+    container.innerHTML = '';
+
+    if (g1Phase === 'GROUP') {
+        // 階段一：回答自己 Group 嘅專屬題
+        const groupPool = currentPlayer && g1QuestionsData.group ? g1QuestionsData.group[currentPlayer.group] : null;
+        const poolIds = groupPool ? Object.keys(groupPool) : [];
+
+        if (poolIds.length === 0) {
+            titleEl.innerText = '你嘅 Group 暫無專屬題，請稍候...';
             return;
         }
 
-        const questions = [];
-        snapshot.forEach(child => questions.push({ id: child.key, ...child.val() }));
+        if (!g1GroupQCache || !poolIds.includes(g1GroupQCache)) {
+            g1GroupQCache = poolIds[Math.floor(Math.random() * poolIds.length)];
+        }
 
-        if (questions.length === 0) return;
+        const q = groupPool[g1GroupQCache];
+        titleEl.innerText = `👥 [${currentPlayer.group}] ${q.question}`;
+        renderG1Options(container, q, 'GAME1_GROUP', checkGroupPhaseComplete);
+    } else {
+        // 階段二：共同題（大螢幕同步顯示，手機作答）
+        const commonPool = g1QuestionsData.common || {};
+        const q = g1ActiveQId ? commonPool[g1ActiveQId] : null;
 
-        const randomQ = questions[Math.floor(Math.random() * questions.length)];
-        document.getElementById('g1-q-title').innerText = randomQ.question;
+        if (!q) {
+            titleEl.innerText = '暫無共同題目';
+            return;
+        }
 
-        randomQ.options.forEach((opt, idx) => {
-            const btn = document.createElement('button');
-            btn.className = 'option-btn';
-            btn.innerText = opt;
-            btn.addEventListener('click', async () => {
-                try {
-                    const voteData = {};
-                    voteData['GAME1'] = idx;
-                    await update(ref(db, `players/${currentPlayer.id}/votes`), voteData);
-                    document.getElementById('g1-my-choice').innerText = `選項 ${idx + 1}`;
-                    alert('✅ 已投票');
-                } catch (error) {
-                    alert('投票失敗: ' + error.message);
-                }
-            });
-            container.appendChild(btn);
+        titleEl.innerText = `🌐 共同題：${q.question}`;
+        renderG1Options(container, q, 'GAME1', null);
+    }
+}
+
+function renderG1Options(container, q, voteKey, afterVote) {
+    q.options.forEach((opt, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.innerText = opt;
+        btn.addEventListener('click', async () => {
+            try {
+                const voteData = {};
+                voteData[voteKey] = idx;
+                await update(ref(db, `players/${currentPlayer.id}/votes`), voteData);
+                document.getElementById('g1-my-choice').innerText = `選項 ${idx + 1}`;
+                alert('✅ 已投票');
+                if (afterVote) await afterVote();
+            } catch (error) {
+                alert('投票失敗: ' + error.message);
+            }
+        });
+        container.appendChild(btn);
+    });
+
+    renderCluesForStep('g1');
+}
+
+// 檢查是否所有玩家都完成咗 Group 專屬題；係就自動切換去共同題階段
+async function checkGroupPhaseComplete() {
+    try {
+        const [playersSnap, groupQSnap] = await Promise.all([
+            get(ref(db, 'players')),
+            get(ref(db, 'game1Questions/group'))
+        ]);
+
+        if (!playersSnap.exists()) return;
+
+        const groupQs = groupQSnap.exists() ? groupQSnap.val() : {};
+
+        let allDone = true;
+        playersSnap.forEach((child) => {
+            const p = child.val();
+            const hasVote = p.votes && p.votes['GAME1_GROUP'] !== undefined;
+            const noGroupQ = !groupQs[p.group];   // 所在 Group 冇專屬題視為已完成
+            if (!hasVote && !noGroupQ) allDone = false;
         });
 
-        renderCluesForStep('g1');
-    });
+        if (!allDone) return;
+
+        // 全部完成 → 揀一條隨機共同題並切換階段
+        const commonSnap = await get(ref(db, 'game1Questions/common'));
+        const updates = { game1Phase: 'COMMON' };
+        if (commonSnap.exists()) {
+            const ids = Object.keys(commonSnap.val());
+            updates.game1ActiveQ = ids[Math.floor(Math.random() * ids.length)];
+        }
+        await update(ref(db, 'gameState'), updates);
+    } catch (error) {
+        console.error('Check group phase failed:', error);
+    }
 }
 
 // ==================== Game 2: Bingo ====================

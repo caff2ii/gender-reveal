@@ -100,49 +100,109 @@ function showSettings() {
 }
 
 // ==================== Game 1 Questions ====================
-function loadG1Questions() {
-    onValue(ref(db, 'game1Questions/common'), (snapshot) => {
-        const container = document.getElementById('g1-questions-container');
-        container.innerHTML = '';
+let g1CommonQuestions = {};
+let g1GroupQuestions = {};
 
-        if (snapshot.exists()) {
-            snapshot.forEach((child) => {
-                const data = child.val();
-                const item = document.createElement('div');
-                item.className = 'question-item';
-                const optsHtml = data.options.map((opt, i) =>
-                    `<div class="opt-line${i === data.correctIndex ? ' correct' : ''}">${i === data.correctIndex ? '✓ ' : ''}${i + 1}. ${opt}</div>`
-                ).join('');
-                item.innerHTML = `
-                    <div class="question-text">
-                        <strong>${data.question}</strong>
-                        <div class="options-list">${optsHtml}</div>
-                    </div>
-                    <button class="btn-delete" data-key="${child.key}">刪除</button>
-                `;
-                container.appendChild(item);
-            });
-        } else {
-            container.innerHTML = '<div class="loading">暫無題目</div>';
+// 載入現有 Groups 供專屬題選擇（datalist）
+onValue(ref(db, 'friendGroups'), (snapshot) => {
+    const datalist = document.getElementById('group-options');
+    if (!datalist) return;
+    datalist.innerHTML = '';
+
+    if (snapshot.exists()) {
+        snapshot.forEach((child) => {
+            const val = child.val();
+            const name = typeof val === 'string' ? val : (val && val.name);
+            if (!name) return;
+            const opt = document.createElement('option');
+            opt.value = name;
+            datalist.appendChild(opt);
+        });
+    }
+});
+
+function buildG1Item(data, dbPath) {
+    const item = document.createElement('div');
+    item.className = 'question-item';
+    const optsHtml = data.options.map((opt, i) =>
+        `<div class="opt-line${i === data.correctIndex ? ' correct' : ''}">${i === data.correctIndex ? '✓ ' : ''}${i + 1}. ${opt}</div>`
+    ).join('');
+    item.innerHTML = `
+        <div class="question-text">
+            <strong>${data.question}</strong>
+            <div class="options-list">${optsHtml}</div>
+        </div>
+        <button class="btn-delete">刪除</button>
+    `;
+    item.querySelector('.btn-delete').addEventListener('click', async () => {
+        try {
+            await remove(ref(db, `game1Questions/${dbPath}`));
+        } catch (error) {
+            alert('刪除失敗: ' + error.message);
         }
+    });
+    return item;
+}
 
-        // Add delete handlers
-        container.querySelectorAll('.btn-delete').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                try {
-                    await remove(ref(db, `game1Questions/common/${btn.dataset.key}`));
-                } catch (error) {
-                    alert('刪除失敗: ' + error.message);
-                }
-            });
+function renderG1Questions() {
+    const container = document.getElementById('g1-questions-container');
+    container.innerHTML = '';
+
+    const hasCommon = Object.keys(g1CommonQuestions).length > 0;
+    const hasGroup = Object.keys(g1GroupQuestions).length > 0;
+
+    if (!hasCommon && !hasGroup) {
+        container.innerHTML = '<div class="loading">暫無題目</div>';
+        return;
+    }
+
+    if (hasCommon) {
+        const header = document.createElement('div');
+        header.className = 'g1-group-header';
+        header.innerText = '🌐 共同題（所有人）';
+        container.appendChild(header);
+
+        Object.entries(g1CommonQuestions).forEach(([key, data]) => {
+            container.appendChild(buildG1Item(data, `common/${key}`));
+        });
+    }
+
+    Object.entries(g1GroupQuestions).forEach(([groupName, questions]) => {
+        const header = document.createElement('div');
+        header.className = 'g1-group-header';
+        header.innerText = `👥 Group「${groupName}」專屬題`;
+        container.appendChild(header);
+
+        Object.entries(questions || {}).forEach(([key, data]) => {
+            container.appendChild(buildG1Item(data, `group/${groupName}/${key}`));
         });
     });
 }
+
+function loadG1Questions() {
+    onValue(ref(db, 'game1Questions/common'), (snapshot) => {
+        g1CommonQuestions = snapshot.exists() ? snapshot.val() : {};
+        renderG1Questions();
+    });
+
+    onValue(ref(db, 'game1Questions/group'), (snapshot) => {
+        g1GroupQuestions = snapshot.exists() ? snapshot.val() : {};
+        renderG1Questions();
+    });
+}
+
+// 顯示/隱藏 Group 名稱輸入框
+document.getElementById('g1-q-type').addEventListener('change', (e) => {
+    document.getElementById('g1-group-row').style.display =
+        e.target.value === 'group' ? '' : 'none';
+});
 
 document.getElementById('btn-add-g1-q').addEventListener('click', async () => {
     const question = document.getElementById('g1-q-text').value.trim();
     const opts = Array.from(document.querySelectorAll('.g1-opt-input')).map(i => i.value.trim());
     const correctIndex = parseInt(document.getElementById('g1-correct-idx').value);
+    const qType = document.getElementById('g1-q-type').value;
+    const groupName = document.getElementById('g1-q-group').value.trim();
 
     if (!question) {
         alert('請輸入題目');
@@ -154,16 +214,26 @@ document.getElementById('btn-add-g1-q').addEventListener('click', async () => {
         return;
     }
 
+    if (qType === 'group' && !groupName) {
+        alert('請輸入或選擇 Group 名稱');
+        return;
+    }
+
     try {
-        await push(ref(db, 'game1Questions/common'), { 
+        const targetPath = qType === 'group'
+            ? `game1Questions/group/${groupName}`
+            : 'game1Questions/common';
+
+        await push(ref(db, targetPath), { 
             question, 
             options: opts, 
             correctIndex 
         });
         
         document.getElementById('g1-q-text').value = '';
+        document.getElementById('g1-q-group').value = '';
         document.querySelectorAll('.g1-opt-input').forEach(i => i.value = '');
-        alert('✅ 題目已新增');
+        alert(qType === 'group' ? `✅ 已新增 Group「${groupName}」嘅專屬題目` : '✅ 已新增共同題目');
     } catch (error) {
         alert('新增失敗: ' + error.message);
     }
