@@ -119,6 +119,7 @@ onValue(ref(db, 'players'), (snapshot) => {
     latestPlayersSnapshot = snapshot;
     renderGlobalStats();
     renderLeaderboard();
+    renderG1GroupProgress(snapshot);
 }, (error) => {
     console.error('載入玩家數據失敗:', error);
 });
@@ -127,6 +128,7 @@ onValue(ref(db, 'players'), (snapshot) => {
 let g1DisplayPhase = 'GROUP';
 let g1DisplayCommonData = {};
 let g1DisplayActiveId = null;
+let g1DisplayGroupData = null;   // null = 未載入
 
 function renderG1Display() {
     const subtitle = document.getElementById('g1-display-subtitle');
@@ -172,18 +174,50 @@ onValue(ref(db, 'gameState/game1Phase'), (phaseSnap) => {
 });
 
 // Group 階段進度：已完成所有專屬題人數
-onValue(ref(db, 'players'), (snap) => {
+function renderG1GroupProgress(playersSnap) {
+    const el = document.getElementById('g1-group-progress');
+    if (!el) return;
+
+    if (!playersSnap || !playersSnap.exists()) {
+        el.innerText = '已完成所有專屬題：0 / 0 人';
+        return;
+    }
+
+    // Group 題資料未載入 → 顯示載入中
+    if (g1DisplayGroupData === null) {
+        el.innerText = '已完成所有專屬題：載入中...';
+        return;
+    }
+
     let total = 0;
     let answered = 0;
-    if (snap.exists()) {
-        snap.forEach((child) => {
-            total++;
-            const v = child.val().votes;
-            if (v && Object.keys(v).some(k => k.startsWith('GAME1_GROUP_'))) answered++;
-        });
-    }
-    const el = document.getElementById('g1-group-progress');
-    if (el) el.innerText = `已完成所有專屬題：${answered} / ${total} 人`;
+    playersSnap.forEach((child) => {
+        total++;
+        const p = child.val();
+        const votes = p.votes || {};
+        const groupQuestions = (p.group && g1DisplayGroupData[p.group]) ? g1DisplayGroupData[p.group] : null;
+        const groupQIds = groupQuestions ? Object.keys(groupQuestions) : [];
+
+        // 所在 Group 冇專屬題 → 視為已完成
+        if (groupQIds.length === 0) {
+            answered++;
+            return;
+        }
+
+        // 需答完所有自己 Group 嘅專屬題先算完成
+        const allAnswered = groupQIds.every(qid => votes[`GAME1_GROUP_${qid}`] !== undefined);
+        if (allAnswered) answered++;
+    });
+    el.innerText = `已完成所有專屬題：${answered} / ${total} 人`;
+}
+
+// 載入 Group 專屬題資料（用嚟計算進度）
+onValue(ref(db, 'game1Questions/group'), (snap) => {
+    g1DisplayGroupData = snap.exists() ? snap.val() : {};
+    // 重新計算進度（用最新 players snapshot）
+    if (latestPlayersSnapshot) renderG1GroupProgress(latestPlayersSnapshot);
+}, (error) => {
+    console.error('載入 Group 專屬題失敗:', error);
 });
 
 // 共同題資料 + 當前生效題目 id

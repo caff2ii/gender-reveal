@@ -167,11 +167,15 @@ function updateG1ControlButtons() {
         btnNextQ.style.display = '';
 
         const commonIds = Object.keys(g1ControlCommonData);
-        const currentIdx = commonIds.indexOf(g1ControlActiveQId);
         const total = commonIds.length;
-        const isLast = currentIdx >= total - 1;
+        const currentIdx = commonIds.indexOf(g1ControlActiveQId);
 
-        if (isLast) {
+        if (currentIdx === -1) {
+            // 未有生效題目
+            btnNextQ.innerText = '➡️ 下一題';
+            btnNextQ.disabled = true;
+            statusEl.innerText = `🌐 共同題階段（共 ${total} 條）——尚未揀選題目`;
+        } else if (currentIdx >= total - 1) {
             btnNextQ.innerText = '✅ 完成所有共同題';
             btnNextQ.disabled = true;
             statusEl.innerText = `🌐 共同題 ${currentIdx + 1}/${total}（最後一題）`;
@@ -213,49 +217,55 @@ onValue(ref(db, 'gameState/game1CommonAllAnswered'), (snap) => {
 });
 
 // 「進入共同題」按鈕：手動切換去共同題階段
-document.getElementById('btn-g1-enter-common').addEventListener('click', async () => {
-    try {
-        const commonSnap = await get(ref(db, 'game1Questions/common'));
-        if (!commonSnap.exists() || Object.keys(commonSnap.val()).length === 0) {
-            alert('尚未設定共同題目！請先喺後台設定新增共同題。');
-            return;
-        }
+const btnG1EnterCommon = document.getElementById('btn-g1-enter-common');
+if (btnG1EnterCommon) {
+    btnG1EnterCommon.addEventListener('click', async () => {
+        try {
+            const commonSnap = await get(ref(db, 'game1Questions/common'));
+            if (!commonSnap.exists() || Object.keys(commonSnap.val()).length === 0) {
+                alert('尚未設定共同題目！請先喺後台設定新增共同題。');
+                return;
+            }
 
-        const ids = Object.keys(commonSnap.val());
-        await update(ref(db, 'gameState'), {
-            game1Phase: 'COMMON',
-            game1ActiveQ: ids[0],
-            game1CommonAllAnswered: false
-        });
-        alert('✅ 已進入共同題階段！');
-    } catch (error) {
-        console.error('進入共同題失敗:', error);
-        alert('進入共同題失敗: ' + error.message);
-    }
-});
+            const ids = Object.keys(commonSnap.val());
+            await update(ref(db, 'gameState'), {
+                game1Phase: 'COMMON',
+                game1ActiveQ: ids[0],
+                game1CommonAllAnswered: false
+            });
+            alert('✅ 已進入共同題階段！');
+        } catch (error) {
+            console.error('進入共同題失敗:', error);
+            alert('進入共同題失敗: ' + error.message);
+        }
+    });
+}
 
 // 「下一題」按鈕：切換到下一條共同題
-document.getElementById('btn-g1-next-q').addEventListener('click', async () => {
-    try {
-        const commonIds = Object.keys(g1ControlCommonData);
-        const currentIdx = commonIds.indexOf(g1ControlActiveQId);
-        const nextIdx = currentIdx + 1;
+const btnG1NextQ = document.getElementById('btn-g1-next-q');
+if (btnG1NextQ) {
+    btnG1NextQ.addEventListener('click', async () => {
+        try {
+            const commonIds = Object.keys(g1ControlCommonData);
+            const currentIdx = commonIds.indexOf(g1ControlActiveQId);
+            const nextIdx = currentIdx + 1;
 
-        if (nextIdx >= commonIds.length) {
-            alert('已經係最後一題！');
-            return;
+            if (nextIdx >= commonIds.length) {
+                alert('已經係最後一題！');
+                return;
+            }
+
+            await update(ref(db, 'gameState'), {
+                game1ActiveQ: commonIds[nextIdx],
+                game1CommonAllAnswered: false
+            });
+            alert('✅ 已切換到下一題！');
+        } catch (error) {
+            console.error('切換下一題失敗:', error);
+            alert('切換下一題失敗: ' + error.message);
         }
-
-        await update(ref(db, 'gameState'), {
-            game1ActiveQ: commonIds[nextIdx],
-            game1CommonAllAnswered: false
-        });
-        alert('✅ 已切換到下一題！');
-    } catch (error) {
-        console.error('切換下一題失敗:', error);
-        alert('切換下一題失敗: ' + error.message);
-    }
-});
+    });
+}
 
 // ==================== Gender Setting Status（只顯示已設定與否，不洩露內容）====================
 onValue(ref(db, 'settings/finalGender'), (snapshot) => {
@@ -306,4 +316,12 @@ document.getElementById('btn-trigger-reveal').addEventListener('click', async ()
 });
 
 // ==================== Initialize ====================
-document.addEventListener('DOMContentLoaded', initializeAuth);
+function onDOMReady(fn) {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', fn);
+    } else {
+        fn();
+    }
+}
+
+onDOMReady(initializeAuth);

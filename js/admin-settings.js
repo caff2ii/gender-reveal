@@ -487,4 +487,12 @@ document.getElementById('btn-reset-all').addEventListener('click', async () => {
 });
 
 // ==================== Initialize ====================
-document.addEventListener('DOMContentLoaded', initializeAuth);
+function onDOMReady(fn) {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', fn);
+    } else {
+        fn();
+    }
+}
+
+onDOMReady(initializeAuth);

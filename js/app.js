@@ -106,9 +106,10 @@ document.getElementById('btn-join-app').addEventListener('click', async () => {
             joinedAt: Date.now()
         });
 
-        currentPlayer = { id: playerId, name, group };
+        currentPlayer = { id: playerId, name, group, votes: {} };
         currentPlayerScore = 0;
         updatePlayerBadge();
+        monitorPlayerScore();
 
         document.getElementById('player-name-input').value = '';
         alert(`✅ 歡迎 ${name}！已進入現場`);
@@ -133,8 +134,11 @@ onValue(ref(db, 'friendGroups'), (snapshot) => {
 });
 
 // ==================== Monitor Player Score & Votes ====================
+let monitorPlayerListenerReady = false;
 function monitorPlayerScore() {
     if (!currentPlayer) return;
+    if (monitorPlayerListenerReady) return;
+    monitorPlayerListenerReady = true;
 
     onValue(ref(db, `players/${currentPlayer.id}`), (snapshot) => {
         const data = snapshot.val();
@@ -218,6 +222,11 @@ function renderG1() {
     const titleEl = document.getElementById('g1-q-title');
     container.innerHTML = '';
 
+    if (!currentPlayer) {
+        titleEl.innerText = '請先登記偵探身份！';
+        return;
+    }
+
     if (g1Phase === 'GROUP') {
         // 階段一：回答自己 Group 嘅所有專屬題
         const groupPool = currentPlayer && g1QuestionsData.group ? g1QuestionsData.group[currentPlayer.group] : null;
@@ -271,6 +280,12 @@ function renderG1() {
 }
 
 function renderG1Options(container, q, voteKey, afterVote) {
+    if (!q || !q.options || !Array.isArray(q.options) || q.options.length === 0) {
+        const titleEl = document.getElementById('g1-q-title');
+        if (titleEl) titleEl.innerText = '警告：呢條題目未有選項，請通知主持人';
+        return;
+    }
+
     q.options.forEach((opt, idx) => {
         const btn = document.createElement('button');
         btn.className = 'option-btn';
@@ -293,7 +308,7 @@ function renderG1Options(container, q, voteKey, afterVote) {
     renderCluesForStep('g1');
 }
 
-// 檢查是否所有玩家都完成咗所有 Group 專屬題；係就自動切換去共同題階段
+// 檢查是否所有玩家都完成咗所有 Group 專屬題；係就通知 control 可以進入共同題
 async function checkGroupPhaseComplete() {
     try {
         const [playersSnap, groupQSnap] = await Promise.all([
@@ -322,14 +337,9 @@ async function checkGroupPhaseComplete() {
 
         if (!allDone) return;
 
-        // 全部完成 → 揀第一條共同題並切換階段
-        const commonSnap = await get(ref(db, 'game1Questions/common'));
-        const updates = { game1Phase: 'COMMON' };
-        if (commonSnap.exists()) {
-            const ids = Object.keys(commonSnap.val());
-            updates.game1ActiveQ = ids[0];   // 由第一題開始
-        }
-        await update(ref(db, 'gameState'), updates);
+        // 所有玩家都答完 → 通知 control 可以進入共同題
+        // 由 control 手動控制進入共同題，呢度只係更新狀態
+        await update(ref(db, 'gameState'), { game1GroupAllAnswered: true });
     } catch (error) {
         console.error('Check group phase failed:', error);
     }
@@ -338,6 +348,8 @@ async function checkGroupPhaseComplete() {
 // 檢查是否所有玩家都完成咗當前共同題
 async function checkCommonPhaseComplete() {
     try {
+        if (!g1ActiveQId) return;
+
         const playersSnap = await get(ref(db, 'players'));
         if (!playersSnap.exists()) return;
 
@@ -525,7 +537,15 @@ onValue(ref(db, 'gameState/currentStep'), (snapshot) => {
 });
 
 // ==================== Initialize ====================
-document.addEventListener('DOMContentLoaded', () => {
+function onDOMReady(fn) {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', fn);
+    } else {
+        fn();
+    }
+}
+
+onDOMReady(() => {
     monitorPlayerScore();
     renderCluesForStep('g1');
     renderCluesForStep('g2');
