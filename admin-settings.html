@@ -42,8 +42,15 @@
             margin-bottom: 10px;
         }
         
+        .input-row-2col {
+            grid-template-columns: 1fr 1fr;
+        }
+        
+        .form-input,
         .input-row input,
+        .input-row select,
         .input-row textarea {
+            width: 100%;
             padding: 10px;
             border: 1px solid #555;
             border-radius: 6px;
@@ -52,9 +59,14 @@
             font-size: 0.9rem;
         }
         
+        .form-input {
+            margin-bottom: 10px;
+        }
+        
         .input-row textarea {
             grid-column: 1 / -1;
             min-height: 60px;
+            resize: vertical;
         }
         
         .btn-add, .btn-delete, .btn-reset {
@@ -115,6 +127,16 @@
             padding: 20px;
             opacity: 0.7;
         }
+        
+        @media (max-width: 600px) {
+            .input-row {
+                grid-template-columns: 1fr 1fr;
+            }
+            
+            .input-row-2col {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
@@ -126,18 +148,18 @@
 
         <!-- Game 1 Questions -->
         <section class="section-card">
-            <div class="section-title">📝 Game 1 題���設定</div>
+            <div class="section-title">📝 Game 1 題目設定</div>
             <div id="g1-questions-container" class="loading">載入中...</div>
             
             <div class="tier-box">
                 <h4>新增題目</h4>
-                <input type="text" id="g1-q-text" placeholder="題目內容">
+                <input type="text" id="g1-q-text" class="form-input" placeholder="題目內容">
                 <div class="input-row">
                     <input type="text" class="g1-opt-input" placeholder="選項 1">
                     <input type="text" class="g1-opt-input" placeholder="選項 2">
                     <input type="text" class="g1-opt-input" placeholder="選項 3">
                 </div>
-                <div class="input-row">
+                <div class="input-row input-row-2col">
                     <input type="text" class="g1-opt-input" placeholder="選項 4">
                     <select id="g1-correct-idx">
                         <option value="0">正確答案: 1</option>
@@ -159,7 +181,7 @@
             
             <div class="tier-box">
                 <h4>新增計分等級 & 線索</h4>
-                <div class="input-row">
+                <div class="input-row input-row-2col">
                     <input type="number" id="tier-score" placeholder="計分門檻 (例: 100)" min="0">
                     <select id="tier-level">
                         <option value="1">等級 1</option>
@@ -167,10 +189,8 @@
                         <option value="3">等級 3</option>
                     </select>
                 </div>
-                <textarea id="tier-clue-text" placeholder="線索文本（純文字）"></textarea>
-                <div class="input-row">
-                    <input type="text" id="tier-clue-image" placeholder="線索圖片 URL (可選，例: https://... 或 images/clue1.png)">
-                </div>
+                <textarea id="tier-clue-text" class="form-input" placeholder="線索文本（純文字）"></textarea>
+                <input type="text" id="tier-clue-image" class="form-input" placeholder="線索圖片 URL (可選，例: https://... 或 images/clue1.png)">
                 <button class="btn-add" id="btn-add-tier">新增等級</button>
             </div>
         </section>
@@ -182,13 +202,13 @@
             
             <div class="tier-box">
                 <h4>新增搶答題</h4>
-                <input type="text" id="g3-q-text" placeholder="題目內容">
+                <input type="text" id="g3-q-text" class="form-input" placeholder="題目內容">
                 <div class="input-row">
                     <input type="text" class="g3-opt-input" placeholder="選項 1">
                     <input type="text" class="g3-opt-input" placeholder="選項 2">
                     <input type="text" class="g3-opt-input" placeholder="選項 3">
                 </div>
-                <div class="input-row">
+                <div class="input-row input-row-2col">
                     <input type="text" class="g3-opt-input" placeholder="選項 4">
                     <select id="g3-correct-idx">
                         <option value="0">正確答案: 1</option>
