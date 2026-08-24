@@ -110,10 +110,13 @@ function loadG1Questions() {
                 const data = child.val();
                 const item = document.createElement('div');
                 item.className = 'question-item';
+                const optsHtml = data.options.map((opt, i) =>
+                    `<div class="opt-line${i === data.correctIndex ? ' correct' : ''}">${i === data.correctIndex ? '✓ ' : ''}${i + 1}. ${opt}</div>`
+                ).join('');
                 item.innerHTML = `
                     <div class="question-text">
                         <strong>${data.question}</strong>
-                        <br><small>✓ 答案: ${data.options[data.correctIndex]}</small>
+                        <div class="options-list">${optsHtml}</div>
                     </div>
                     <button class="btn-delete" data-key="${child.key}">刪除</button>
                 `;
@@ -254,10 +257,13 @@ function loadG3Questions() {
                 const data = child.val();
                 const item = document.createElement('div');
                 item.className = 'question-item';
+                const optsHtml = data.options.map((opt, i) =>
+                    `<div class="opt-line${i === data.correctIndex ? ' correct' : ''}">${i === data.correctIndex ? '✓ ' : ''}${i + 1}. ${opt}</div>`
+                ).join('');
                 item.innerHTML = `
                     <div class="question-text">
                         <strong>第 ${count} 題: ${data.question}</strong>
-                        <br><small>✓ 答案: ${data.options[data.correctIndex]}</small>
+                        <div class="options-list">${optsHtml}</div>
                     </div>
                     <button class="btn-delete" data-key="${child.key}">刪除</button>
                 `;

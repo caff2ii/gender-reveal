@@ -114,12 +114,42 @@
             margin-bottom: 10px;
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            align-items: flex-start;
+            gap: 10px;
         }
         
         .question-text, .clue-text {
             flex: 1;
+            min-width: 0;
             font-size: 0.9rem;
+        }
+        
+        .question-item .btn-delete,
+        .clue-item .btn-delete {
+            width: auto;
+            flex-shrink: 0;
+            padding: 4px 10px;
+            margin: 0;
+            font-size: 0.75rem;
+            line-height: 1.4;
+        }
+        
+        .options-list {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4px 12px;
+            margin-top: 6px;
+            font-size: 0.85rem;
+        }
+        
+        .opt-line {
+            opacity: 0.85;
+        }
+        
+        .opt-line.correct {
+            color: #2ecc71;
+            font-weight: bold;
+            opacity: 1;
         }
         
         .loading {
@@ -134,6 +164,10 @@
             }
             
             .input-row-2col {
+                grid-template-columns: 1fr;
+            }
+            
+            .options-list {
                 grid-template-columns: 1fr;
             }
         }
