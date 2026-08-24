@@ -140,6 +140,7 @@ let g1ControlPhase = 'GROUP';
 let g1ControlCommonData = {};
 let g1ControlActiveQId = null;
 let g1ControlCommonAllAnswered = false;
+let g1ControlGroupAllAnswered = false;
 
 function updateG1ControlButtons() {
     const g1ControlSection = document.getElementById('g1-control-section');
@@ -159,7 +160,17 @@ function updateG1ControlButtons() {
         // Group 階段：顯示「進入共同題」按鈕
         btnEnterCommon.style.display = '';
         btnNextQ.style.display = 'none';
-        statusEl.innerText = '📋 目前階段：Group 專屬題（玩家需答完所有專屬題）';
+
+        if (g1ControlGroupAllAnswered) {
+            statusEl.innerText = '✅ 所有玩家已答完 Group 專屬題！可以進入共同題 Part！';
+            btnEnterCommon.style.background = '#ff9800';
+            btnEnterCommon.innerText = '🌐 進入共同題 Part（可以撳喇！）';
+        } else {
+            statusEl.innerText = '📋 目前階段：Group 專屬題（等所有玩家答完）';
+            btnEnterCommon.style.background = '#4CAF50';
+            btnEnterCommon.innerText = '🌐 進入共同題 Part';
+        }
+
         if (progressEl) progressEl.style.display = '';
     } else {
         // 共同題階段：顯示「下一題」按鈕
@@ -204,6 +215,12 @@ onValue(ref(db, 'game1Questions/common'), (snap) => {
 // 監聽當前共同題
 onValue(ref(db, 'gameState/game1ActiveQ'), (snap) => {
     g1ControlActiveQId = snap.val();
+    updateG1ControlButtons();
+});
+
+// 監聽所有玩家是否已答完所有 Group 專屬題
+onValue(ref(db, 'gameState/game1GroupAllAnswered'), (snap) => {
+    g1ControlGroupAllAnswered = snap.val() || false;
     updateG1ControlButtons();
 });
 

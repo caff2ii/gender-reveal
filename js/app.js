@@ -1,4 +1,4 @@
-import { ref, set, onValue, push, get, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+import { ref, set, onValue, push, get, update, off } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 import { db } from "./firebase-config.js";
 
 let currentPlayer = null;
@@ -81,6 +81,57 @@ onValue(ref(db, 'gameState'), (snapshot) => {
     }
 });
 
+// ==================== Player Session（localStorage 持久化）====================
+function savePlayerSession() {
+    if (currentPlayer) {
+        localStorage.setItem('genderRevealPlayerId', currentPlayer.id);
+        localStorage.setItem('genderRevealPlayerName', currentPlayer.name);
+        localStorage.setItem('genderRevealPlayerGroup', currentPlayer.group);
+    }
+}
+
+function clearPlayerSession() {
+    localStorage.removeItem('genderRevealPlayerId');
+    localStorage.removeItem('genderRevealPlayerName');
+    localStorage.removeItem('genderRevealPlayerGroup');
+}
+
+async function restorePlayerSession() {
+    const playerId = localStorage.getItem('genderRevealPlayerId');
+    const playerName = localStorage.getItem('genderRevealPlayerName');
+    const playerGroup = localStorage.getItem('genderRevealPlayerGroup');
+
+    if (!playerId || !playerName || !playerGroup) {
+        return;
+    }
+
+    try {
+        const snap = await get(ref(db, `players/${playerId}`));
+        if (!snap.exists()) {
+            // 玩家數據已被重置或刪除
+            clearPlayerSession();
+            return;
+        }
+
+        const data = snap.val();
+        currentPlayer = { id: playerId, name: data.name || playerName, group: data.group || playerGroup, votes: data.votes || {} };
+        currentPlayerScore = data.score || 0;
+        updatePlayerBadge();
+        monitorPlayerScore();
+        renderCluesForStep('g1');
+        renderCluesForStep('g2');
+        renderCluesForStep('g3');
+
+        // 如果已經喺 GAME1，重新渲染
+        if (currentStep === 'GAME1') renderG1();
+
+        console.log('✅ 已恢復偵探身份:', currentPlayer.name);
+    } catch (error) {
+        console.error('恢復玩家身份失敗:', error);
+        clearPlayerSession();
+    }
+}
+
 // ==================== Player Registration ====================
 document.getElementById('btn-join-app').addEventListener('click', async () => {
     const name = document.getElementById('player-name-input').value.trim();
@@ -110,6 +161,7 @@ document.getElementById('btn-join-app').addEventListener('click', async () => {
         currentPlayerScore = 0;
         updatePlayerBadge();
         monitorPlayerScore();
+        savePlayerSession();
 
         document.getElementById('player-name-input').value = '';
         alert(`✅ 歡迎 ${name}！已進入現場`);
@@ -135,10 +187,20 @@ onValue(ref(db, 'friendGroups'), (snapshot) => {
 
 // ==================== Monitor Player Score & Votes ====================
 let monitorPlayerListenerReady = false;
+let monitorPlayerId = null;
 function monitorPlayerScore() {
     if (!currentPlayer) return;
-    if (monitorPlayerListenerReady) return;
+
+    // 如果已有 listener 但 player 唔同，需要移除舊 listener 再重新監聽
+    if (monitorPlayerListenerReady) {
+        if (monitorPlayerId !== currentPlayer.id) {
+            off(ref(db, `players/${monitorPlayerId}`));
+        } else {
+            return;
+        }
+    }
     monitorPlayerListenerReady = true;
+    monitorPlayerId = currentPlayer.id;
 
     onValue(ref(db, `players/${currentPlayer.id}`), (snapshot) => {
         const data = snapshot.val();
@@ -223,6 +285,17 @@ function renderG1() {
     container.innerHTML = '';
 
     if (!currentPlayer) {
+        // 嘗試從 localStorage 恢復身份
+        const storedId = localStorage.getItem('genderRevealPlayerId');
+        const storedName = localStorage.getItem('genderRevealPlayerName');
+        const storedGroup = localStorage.getItem('genderRevealPlayerGroup');
+
+        if (storedId && storedName && storedGroup) {
+            titleEl.innerText = '⏳ 正在恢復偵探身份，請稍候...';
+            restorePlayerSession();
+            return;
+        }
+
         titleEl.innerText = '請先登記偵探身份！';
         return;
     }
@@ -546,7 +619,7 @@ function onDOMReady(fn) {
 }
 
 onDOMReady(() => {
-    monitorPlayerScore();
+    restorePlayerSession();
     renderCluesForStep('g1');
     renderCluesForStep('g2');
     renderCluesForStep('g3');
