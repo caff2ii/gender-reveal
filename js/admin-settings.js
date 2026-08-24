@@ -150,6 +150,13 @@ function loadGroups() {
                 groupSelect.appendChild(opt);
             }
         });
+    }, (error) => {
+        // 讀取失敗（例如 Firebase 規則拒絕）時顯示明確錯誤
+        console.error('載入 Group 失敗:', error);
+        const container = document.getElementById('groups-container');
+        if (container) {
+            container.innerHTML = `<div class="loading" style="color:#f44336;">❌ 載入 Group 失敗：${error.message}</div>`;
+        }
     });
 }
 
@@ -168,6 +175,7 @@ document.getElementById('btn-add-group').addEventListener('click', async () => {
         document.getElementById('new-group-name').value = '';
         alert(`✅ 已新增 Group「${name}」`);
     } catch (error) {
+        console.error('新增 Group 失敗:', error);
         alert('新增失敗: ' + error.message);
     }
 });
@@ -240,15 +248,19 @@ function loadG1Questions() {
     onValue(ref(db, 'game1Questions/common'), (snapshot) => {
         g1CommonQuestions = snapshot.exists() ? snapshot.val() : {};
         renderG1Questions();
+    }, (error) => {
+        console.error('載入共同題失敗:', error);
     });
 
     onValue(ref(db, 'game1Questions/group'), (snapshot) => {
         g1GroupQuestions = snapshot.exists() ? snapshot.val() : {};
         renderG1Questions();
+    }, (error) => {
+        console.error('載入 Group 專屬題失敗:', error);
     });
 }
 
-// 顯示/隱藏 Group 名稱輸入框
+// 顯示/隱藏 Group 名稱下拉選單
 document.getElementById('g1-q-type').addEventListener('change', (e) => {
     document.getElementById('g1-group-row').style.display =
         e.target.value === 'group' ? '' : 'none';
@@ -292,6 +304,7 @@ document.getElementById('btn-add-g1-q').addEventListener('click', async () => {
         document.querySelectorAll('.g1-opt-input').forEach(i => i.value = '');
         alert(qType === 'group' ? `✅ 已新增 Group「${groupName}」嘅專屬題目` : '✅ 已新增共同題目');
     } catch (error) {
+        console.error('新增題目失敗:', error);
         alert('新增失敗: ' + error.message);
     }
 });
@@ -333,6 +346,8 @@ function loadCluesTiers() {
                 }
             });
         });
+    }, (error) => {
+        console.error('載入線索失敗:', error);
     });
 }
 
@@ -366,6 +381,7 @@ document.getElementById('btn-add-tier').addEventListener('click', async () => {
         document.getElementById('tier-clue-image').value = '';
         alert('✅ 等級已新增');
     } catch (error) {
+        console.error('新增等級失敗:', error);
         alert('新增失敗: ' + error.message);
     }
 });
@@ -411,6 +427,8 @@ function loadG3Questions() {
                 }
             });
         });
+    }, (error) => {
+        console.error('載入搶答題失敗:', error);
     });
 }
 
@@ -440,6 +458,7 @@ document.getElementById('btn-add-g3-q').addEventListener('click', async () => {
         document.querySelectorAll('.g3-opt-input').forEach(i => i.value = '');
         alert('✅ 搶答題已新增');
     } catch (error) {
+        console.error('新增搶答題失敗:', error);
         alert('新增失敗: ' + error.message);
     }
 });
@@ -465,6 +484,7 @@ document.getElementById('btn-reset-all').addEventListener('click', async () => {
         
         alert('✅ 所有遊戲數據已重置');
     } catch (error) {
+        console.error('重置失敗:', error);
         alert('重置失敗: ' + error.message);
     }
 });
