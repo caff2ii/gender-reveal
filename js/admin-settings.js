@@ -99,27 +99,84 @@ function showSettings() {
     document.querySelector('body').style.display = 'block';
 }
 
-// ==================== Game 1 Questions ====================
-let g1CommonQuestions = {};
-let g1GroupQuestions = {};
+// ==================== Group 管理 ====================
+let existingGroupNames = new Set();
 
-// 載入現有 Groups 供專屬題選擇（datalist）
-onValue(ref(db, 'friendGroups'), (snapshot) => {
-    const datalist = document.getElementById('group-options');
-    if (!datalist) return;
-    datalist.innerHTML = '';
+function loadGroups() {
+    onValue(ref(db, 'friendGroups'), (snapshot) => {
+        const container = document.getElementById('groups-container');
+        const groupSelect = document.getElementById('g1-q-group');
+        container.innerHTML = '';
+        existingGroupNames.clear();
 
-    if (snapshot.exists()) {
+        // 同步更新 Game 1 專屬題嘅 Group 下拉選單
+        if (groupSelect) {
+            groupSelect.innerHTML = '<option value="">-- 請選擇 Group --</option>';
+        }
+
+        if (!snapshot.exists()) {
+            container.innerHTML = '<div class="loading">暫無 Group，請喺下方新增</div>';
+            return;
+        }
+
         snapshot.forEach((child) => {
             const val = child.val();
             const name = typeof val === 'string' ? val : (val && val.name);
             if (!name) return;
-            const opt = document.createElement('option');
-            opt.value = name;
-            datalist.appendChild(opt);
+            existingGroupNames.add(name);
+
+            // Group 列表項目
+            const item = document.createElement('div');
+            item.className = 'question-item';
+            item.innerHTML = `
+                <div class="question-text"><strong>👥 ${name}</strong></div>
+                <button class="btn-delete">刪除</button>
+            `;
+            item.querySelector('.btn-delete').addEventListener('click', async () => {
+                if (!confirm(`確定刪除 Group「${name}」？已登記該 Group 嘅玩家不受影響，但佢哋將收唔到專屬題。`)) return;
+                try {
+                    await remove(ref(db, `friendGroups/${child.key}`));
+                } catch (error) {
+                    alert('刪除失敗: ' + error.message);
+                }
+            });
+            container.appendChild(item);
+
+            // 加入下拉選單選項
+            if (groupSelect) {
+                const opt = document.createElement('option');
+                opt.value = name;
+                opt.innerText = name;
+                groupSelect.appendChild(opt);
+            }
         });
+    });
+}
+
+document.getElementById('btn-add-group').addEventListener('click', async () => {
+    const name = document.getElementById('new-group-name').value.trim();
+    if (!name) {
+        alert('請輸入 Group 名稱');
+        return;
+    }
+    if (existingGroupNames.has(name)) {
+        alert(`Group「${name}」已存在`);
+        return;
+    }
+    try {
+        await push(ref(db, 'friendGroups'), { name });
+        document.getElementById('new-group-name').value = '';
+        alert(`✅ 已新增 Group「${name}」`);
+    } catch (error) {
+        alert('新增失敗: ' + error.message);
     }
 });
+
+loadGroups();
+
+// ==================== Game 1 Questions ====================
+let g1CommonQuestions = {};
+let g1GroupQuestions = {};
 
 function buildG1Item(data, dbPath) {
     const item = document.createElement('div');
@@ -215,7 +272,7 @@ document.getElementById('btn-add-g1-q').addEventListener('click', async () => {
     }
 
     if (qType === 'group' && !groupName) {
-        alert('請輸入或選擇 Group 名稱');
+        alert('請選擇 Group 名稱');
         return;
     }
 

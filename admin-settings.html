@@ -187,6 +187,20 @@
             <p>派對前期設定：題目、線索、計分等級</p>
         </div>
 
+        <!-- Group Settings -->
+        <section class="section-card">
+            <div class="section-title">👥 Group 設定</div>
+            <p style="opacity: 0.8; font-size: 0.9rem;">設定玩家登記時可選擇嘅 Group（Game 1 專屬題會按呢啲 Group 分派）</p>
+            
+            <div id="groups-container" class="loading">載入中...</div>
+            
+            <div class="tier-box">
+                <h4>新增 Group</h4>
+                <input type="text" id="new-group-name" class="form-input" placeholder="Group 名稱">
+                <button class="btn-add" id="btn-add-group">新增 Group</button>
+            </div>
+        </section>
+
         <!-- Game 1 Questions -->
         <section class="section-card">
             <div class="section-title">📝 Game 1 題目設定</div>
@@ -202,8 +216,9 @@
                     </select>
                 </div>
                 <div class="input-row" id="g1-group-row" style="display: none;">
-                    <input type="text" id="g1-q-group" class="form-input" style="margin-bottom: 0;" list="group-options" placeholder="輸入或選擇 Group 名稱（須與玩家所選 Group 相同）">
-                    <datalist id="group-options"></datalist>
+                    <select id="g1-q-group">
+                        <option value="">-- 請選擇 Group --</option>
+                    </select>
                 </div>
                 <div class="input-row">
                     <input type="text" class="g1-opt-input" placeholder="選項 1">
