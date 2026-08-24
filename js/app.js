@@ -132,12 +132,15 @@ onValue(ref(db, 'friendGroups'), (snapshot) => {
     }
 });
 
-// ==================== Monitor Player Score ====================
+// ==================== Monitor Player Score & Votes ====================
 function monitorPlayerScore() {
     if (!currentPlayer) return;
 
-    onValue(ref(db, `players/${currentPlayer.id}/score`), (snapshot) => {
-        currentPlayerScore = snapshot.val() || 0;
+    onValue(ref(db, `players/${currentPlayer.id}`), (snapshot) => {
+        const data = snapshot.val();
+        if (!data) return;
+        currentPlayerScore = data.score || 0;
+        currentPlayer.votes = data.votes || {};
         updatePlayerBadge();
 
         // Update all score displays
@@ -149,6 +152,9 @@ function monitorPlayerScore() {
         renderCluesForStep('g1');
         renderCluesForStep('g2');
         renderCluesForStep('g3');
+
+        // Re-render Game 1 if active
+        if (currentStep === 'GAME1') renderG1();
     });
 }
 
@@ -156,7 +162,6 @@ function monitorPlayerScore() {
 let g1Phase = 'GROUP';
 let g1QuestionsData = {};
 let g1ActiveQId = null;
-let g1GroupQCache = null;   // 快取本機揀選嘅 Group 題 id，避免資料更新時題目跳來跳去
 let g1ListenersReady = false;
 
 function loadGame1Question() {
@@ -165,7 +170,6 @@ function loadGame1Question() {
 
         onValue(ref(db, 'gameState/game1Phase'), (snap) => {
             const newPhase = snap.val() || 'GROUP';
-            if (newPhase !== g1Phase) g1GroupQCache = null;
             g1Phase = newPhase;
             renderG1();
         });
@@ -183,6 +187,30 @@ function loadGame1Question() {
     renderG1();
 }
 
+// 取得玩家已答嘅 Group 專屬題 id 列表
+function getAnsweredGroupQIds() {
+    const votes = (currentPlayer && currentPlayer.votes) || {};
+    const answered = [];
+    Object.keys(votes).forEach(key => {
+        if (key.startsWith('GAME1_GROUP_')) {
+            answered.push(key.replace('GAME1_GROUP_', ''));
+        }
+    });
+    return answered;
+}
+
+// 取得玩家已答嘅共同題 id 列表
+function getAnsweredCommonQIds() {
+    const votes = (currentPlayer && currentPlayer.votes) || {};
+    const answered = [];
+    Object.keys(votes).forEach(key => {
+        if (key.startsWith('GAME1_COMMON_')) {
+            answered.push(key.replace('GAME1_COMMON_', ''));
+        }
+    });
+    return answered;
+}
+
 function renderG1() {
     if (currentStep !== 'GAME1') return;
 
@@ -191,7 +219,7 @@ function renderG1() {
     container.innerHTML = '';
 
     if (g1Phase === 'GROUP') {
-        // 階段一：回答自己 Group 嘅專屬題
+        // 階段一：回答自己 Group 嘅所有專屬題
         const groupPool = currentPlayer && g1QuestionsData.group ? g1QuestionsData.group[currentPlayer.group] : null;
         const poolIds = groupPool ? Object.keys(groupPool) : [];
 
@@ -200,13 +228,23 @@ function renderG1() {
             return;
         }
 
-        if (!g1GroupQCache || !poolIds.includes(g1GroupQCache)) {
-            g1GroupQCache = poolIds[Math.floor(Math.random() * poolIds.length)];
+        const answeredIds = getAnsweredGroupQIds();
+        const remainingIds = poolIds.filter(id => !answeredIds.includes(id));
+
+        if (remainingIds.length === 0) {
+            // 已答完所有 Group 專屬題
+            titleEl.innerText = `✅ 你已答完所有 ${poolIds.length} 條 Group 專屬題！等待其他玩家完成...`;
+            container.innerHTML = '<p style="text-align:center; opacity:0.8; padding:20px;">⏳ 等緊其他玩家答完，就會自動進入共同題階段</p>';
+            renderCluesForStep('g1');
+            return;
         }
 
-        const q = groupPool[g1GroupQCache];
-        titleEl.innerText = `👥 [${currentPlayer.group}] ${q.question}`;
-        renderG1Options(container, q, 'GAME1_GROUP', checkGroupPhaseComplete);
+        // 顯示下一條未答嘅題目
+        const nextQId = remainingIds[0];
+        const q = groupPool[nextQId];
+        const answeredCount = answeredIds.length;
+        titleEl.innerText = `👥 [${currentPlayer.group}] 專屬題 (${answeredCount + 1}/${poolIds.length})：${q.question}`;
+        renderG1Options(container, q, `GAME1_GROUP_${nextQId}`, checkGroupPhaseComplete);
     } else {
         // 階段二：共同題（大螢幕同步顯示，手機作答）
         const commonPool = g1QuestionsData.common || {};
@@ -217,8 +255,18 @@ function renderG1() {
             return;
         }
 
+        const answeredIds = getAnsweredCommonQIds();
+        const alreadyAnswered = answeredIds.includes(g1ActiveQId);
+
+        if (alreadyAnswered) {
+            titleEl.innerText = `🌐 共同題：${q.question}`;
+            container.innerHTML = '<p style="text-align:center; opacity:0.8; padding:20px;">✅ 你已答完呢題！等待其他玩家完成...<br><br>⏳ 所有玩家答完後，主持人會切換到下一題</p>';
+            renderCluesForStep('g1');
+            return;
+        }
+
         titleEl.innerText = `🌐 共同題：${q.question}`;
-        renderG1Options(container, q, 'GAME1', null);
+        renderG1Options(container, q, `GAME1_COMMON_${g1ActiveQId}`, checkCommonPhaseComplete);
     }
 }
 
@@ -245,7 +293,7 @@ function renderG1Options(container, q, voteKey, afterVote) {
     renderCluesForStep('g1');
 }
 
-// 檢查是否所有玩家都完成咗 Group 專屬題；係就自動切換去共同題階段
+// 檢查是否所有玩家都完成咗所有 Group 專屬題；係就自動切換去共同題階段
 async function checkGroupPhaseComplete() {
     try {
         const [playersSnap, groupQSnap] = await Promise.all([
@@ -260,23 +308,55 @@ async function checkGroupPhaseComplete() {
         let allDone = true;
         playersSnap.forEach((child) => {
             const p = child.val();
-            const hasVote = p.votes && p.votes['GAME1_GROUP'] !== undefined;
-            const noGroupQ = !groupQs[p.group];   // 所在 Group 冇專屬題視為已完成
-            if (!hasVote && !noGroupQ) allDone = false;
+            const groupQuestions = groupQs[p.group] || {};
+            const groupQIds = Object.keys(groupQuestions);
+            const noGroupQ = groupQIds.length === 0;   // 所在 Group 冇專屬題視為已完成
+
+            if (noGroupQ) return;
+
+            // 檢查玩家是否答完所有 Group 專屬題
+            const votes = p.votes || {};
+            const allAnswered = groupQIds.every(qid => votes[`GAME1_GROUP_${qid}`] !== undefined);
+            if (!allAnswered) allDone = false;
         });
 
         if (!allDone) return;
 
-        // 全部完成 → 揀一條隨機共同題並切換階段
+        // 全部完成 → 揀第一條共同題並切換階段
         const commonSnap = await get(ref(db, 'game1Questions/common'));
         const updates = { game1Phase: 'COMMON' };
         if (commonSnap.exists()) {
             const ids = Object.keys(commonSnap.val());
-            updates.game1ActiveQ = ids[Math.floor(Math.random() * ids.length)];
+            updates.game1ActiveQ = ids[0];   // 由第一題開始
         }
         await update(ref(db, 'gameState'), updates);
     } catch (error) {
         console.error('Check group phase failed:', error);
+    }
+}
+
+// 檢查是否所有玩家都完成咗當前共同題
+async function checkCommonPhaseComplete() {
+    try {
+        const playersSnap = await get(ref(db, 'players'));
+        if (!playersSnap.exists()) return;
+
+        let allDone = true;
+        playersSnap.forEach((child) => {
+            const p = child.val();
+            const votes = p.votes || {};
+            if (votes[`GAME1_COMMON_${g1ActiveQId}`] === undefined) {
+                allDone = false;
+            }
+        });
+
+        if (!allDone) return;
+
+        // 所有玩家都答完當前共同題 → 通知 control 可以切下一題
+        // 由 control 手動控制下一題，呢度只係更新狀態
+        await update(ref(db, 'gameState'), { game1CommonAllAnswered: true });
+    } catch (error) {
+        console.error('Check common phase complete failed:', error);
     }
 }
 

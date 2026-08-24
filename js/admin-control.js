@@ -109,6 +109,9 @@ onValue(ref(db, 'gameState/currentStep'), (snapshot) => {
     document.querySelectorAll('.step-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.step === currentStep);
     });
+
+    // 更新 Game 1 控制按鈕狀態
+    updateG1ControlButtons();
 });
 
 document.querySelectorAll('.step-btn').forEach(btn => {
@@ -119,7 +122,8 @@ document.querySelectorAll('.step-btn').forEach(btn => {
                 await update(ref(db, 'gameState'), {
                     currentStep: 'GAME1',
                     game1Phase: 'GROUP',
-                    game1ActiveQ: null
+                    game1ActiveQ: null,
+                    game1CommonAllAnswered: false
                 });
             } else {
                 await set(ref(db, 'gameState/currentStep'), btn.dataset.step);
@@ -129,6 +133,128 @@ document.querySelectorAll('.step-btn').forEach(btn => {
             alert('更新失敗: ' + error.message);
         }
     });
+});
+
+// ==================== Game 1 控制（Group 專屬題 → 共同題）====================
+let g1ControlPhase = 'GROUP';
+let g1ControlCommonData = {};
+let g1ControlActiveQId = null;
+let g1ControlCommonAllAnswered = false;
+
+function updateG1ControlButtons() {
+    const g1ControlSection = document.getElementById('g1-control-section');
+    if (!g1ControlSection) return;
+
+    // 只有喺 GAME1 階段先顯示控制區
+    g1ControlSection.style.display = currentStep === 'GAME1' ? '' : 'none';
+
+    const btnEnterCommon = document.getElementById('btn-g1-enter-common');
+    const btnNextQ = document.getElementById('btn-g1-next-q');
+    const statusEl = document.getElementById('g1-control-status');
+    const progressEl = document.getElementById('g1-control-progress');
+
+    if (!btnEnterCommon || !btnNextQ || !statusEl) return;
+
+    if (g1ControlPhase === 'GROUP') {
+        // Group 階段：顯示「進入共同題」按鈕
+        btnEnterCommon.style.display = '';
+        btnNextQ.style.display = 'none';
+        statusEl.innerText = '📋 目前階段：Group 專屬題（玩家需答完所有專屬題）';
+        if (progressEl) progressEl.style.display = '';
+    } else {
+        // 共同題階段：顯示「下一題」按鈕
+        btnEnterCommon.style.display = 'none';
+        btnNextQ.style.display = '';
+
+        const commonIds = Object.keys(g1ControlCommonData);
+        const currentIdx = commonIds.indexOf(g1ControlActiveQId);
+        const total = commonIds.length;
+        const isLast = currentIdx >= total - 1;
+
+        if (isLast) {
+            btnNextQ.innerText = '✅ 完成所有共同題';
+            btnNextQ.disabled = true;
+            statusEl.innerText = `🌐 共同題 ${currentIdx + 1}/${total}（最後一題）`;
+        } else {
+            btnNextQ.innerText = `➡️ 下一題（${currentIdx + 1}/${total}）`;
+            btnNextQ.disabled = false;
+            statusEl.innerText = `🌐 共同題 ${currentIdx + 1}/${total}`;
+        }
+
+        if (progressEl) progressEl.style.display = 'none';
+    }
+}
+
+// 監聽 Game 1 階段
+onValue(ref(db, 'gameState/game1Phase'), (snap) => {
+    g1ControlPhase = snap.val() || 'GROUP';
+    updateG1ControlButtons();
+});
+
+// 監聽共同題資料
+onValue(ref(db, 'game1Questions/common'), (snap) => {
+    g1ControlCommonData = snap.exists() ? snap.val() : {};
+    updateG1ControlButtons();
+});
+
+// 監聽當前共同題
+onValue(ref(db, 'gameState/game1ActiveQ'), (snap) => {
+    g1ControlActiveQId = snap.val();
+    updateG1ControlButtons();
+});
+
+// 監聽所有玩家是否已答完當前共同題
+onValue(ref(db, 'gameState/game1CommonAllAnswered'), (snap) => {
+    g1ControlCommonAllAnswered = snap.val() || false;
+    const statusEl = document.getElementById('g1-control-status');
+    if (statusEl && g1ControlPhase === 'COMMON' && g1ControlCommonAllAnswered) {
+        statusEl.innerText += ' ✅ 所有玩家已答完，可以切下一題！';
+    }
+});
+
+// 「進入共同題」按鈕：手動切換去共同題階段
+document.getElementById('btn-g1-enter-common').addEventListener('click', async () => {
+    try {
+        const commonSnap = await get(ref(db, 'game1Questions/common'));
+        if (!commonSnap.exists() || Object.keys(commonSnap.val()).length === 0) {
+            alert('尚未設定共同題目！請先喺後台設定新增共同題。');
+            return;
+        }
+
+        const ids = Object.keys(commonSnap.val());
+        await update(ref(db, 'gameState'), {
+            game1Phase: 'COMMON',
+            game1ActiveQ: ids[0],
+            game1CommonAllAnswered: false
+        });
+        alert('✅ 已進入共同題階段！');
+    } catch (error) {
+        console.error('進入共同題失敗:', error);
+        alert('進入共同題失敗: ' + error.message);
+    }
+});
+
+// 「下一題」按鈕：切換到下一條共同題
+document.getElementById('btn-g1-next-q').addEventListener('click', async () => {
+    try {
+        const commonIds = Object.keys(g1ControlCommonData);
+        const currentIdx = commonIds.indexOf(g1ControlActiveQId);
+        const nextIdx = currentIdx + 1;
+
+        if (nextIdx >= commonIds.length) {
+            alert('已經係最後一題！');
+            return;
+        }
+
+        await update(ref(db, 'gameState'), {
+            game1ActiveQ: commonIds[nextIdx],
+            game1CommonAllAnswered: false
+        });
+        alert('✅ 已切換到下一題！');
+    } catch (error) {
+        console.error('切換下一題失敗:', error);
+        alert('切換下一題失敗: ' + error.message);
+    }
 });
 
 // ==================== Gender Setting Status（只顯示已設定與否，不洩露內容）====================

@@ -256,6 +256,21 @@
                 </div>
             </div>
 
+            <!-- Game 1 控制（Group 專屬題 → 共同題） -->
+            <div class="dashboard-card" id="g1-control-section" style="margin-top: 20px; display: none;">
+                <div class="card-title">🔍 Game 1 控制</div>
+                <div id="g1-control-status" style="text-align: center; opacity: 0.9; margin-bottom: 15px; font-size: 0.95rem;">載入中...</div>
+                <div id="g1-control-progress" style="text-align: center; opacity: 0.7; margin-bottom: 10px; font-size: 0.85rem;">
+                    玩家需答完所有 Group 專屬題，先可以進入共同題階段
+                </div>
+                <button id="btn-g1-enter-common" style="width:100%; padding:15px; background:#4CAF50; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer; margin-bottom:10px;">
+                    🌐 進入共同題 Part
+                </button>
+                <button id="btn-g1-next-q" style="width:100%; padding:15px; background:#2196F3; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer; display:none;">
+                    ➡️ 下一題
+                </button>
+            </div>
+
             <!-- Gender Setting Status -->
             <div class="dashboard-card" style="margin-top: 20px;">
                 <div class="card-title">👶 最終性別狀態</div>
@@ -283,6 +298,6 @@
     <!-- Master Reveal Button (Full Width) -->
     <button class="reveal-btn" id="btn-trigger-reveal">🔥 觸發最終 10 秒倒數 REVEAL</button>
 
-    <script type="module" src="js/admin-control.js?v=20250825"></script>
+    <script type="module" src="js/admin-control.js?v=20250826"></script>
 </body>
 </html>

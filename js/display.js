@@ -36,7 +36,7 @@ let latestPlayersSnapshot = null;
 function hasAnsweredStep(votes, step) {
     if (!votes) return false;
     if (step === 'GAME1') {
-        return votes['GAME1'] !== undefined || votes['GAME1_GROUP'] !== undefined;
+        return Object.keys(votes).some(k => k.startsWith('GAME1_GROUP_') || k.startsWith('GAME1_COMMON_'));
     }
     if (step === 'GAME2') {
         return Object.keys(votes).some(k => k.startsWith('GAME2_'));
@@ -140,15 +140,21 @@ function renderG1Display() {
 
         const titleEl = document.getElementById('g1-display-q-title');
         const optsEl = document.getElementById('g1-display-q-opts');
+        const numberEl = document.getElementById('g1-display-q-number');
         const q = g1DisplayActiveId ? g1DisplayCommonData[g1DisplayActiveId] : null;
 
         if (titleEl && optsEl) {
             if (q) {
+                // 顯示題號
+                const commonIds = Object.keys(g1DisplayCommonData);
+                const currentIdx = commonIds.indexOf(g1DisplayActiveId);
+                if (numberEl) numberEl.innerText = `🌐 共同題 ${currentIdx + 1} / ${commonIds.length}`;
                 titleEl.innerText = q.question;
                 optsEl.innerHTML = q.options
                     .map((o, i) => `<div>${i + 1}. ${o}</div>`)
                     .join('');
             } else {
+                if (numberEl) numberEl.innerText = '';
                 titleEl.innerText = '暫無共同題目';
                 optsEl.innerHTML = '';
             }
@@ -165,7 +171,7 @@ onValue(ref(db, 'gameState/game1Phase'), (phaseSnap) => {
     renderG1Display();
 });
 
-// Group 階段進度：已完成專屬題人數
+// Group 階段進度：已完成所有專屬題人數
 onValue(ref(db, 'players'), (snap) => {
     let total = 0;
     let answered = 0;
@@ -173,11 +179,11 @@ onValue(ref(db, 'players'), (snap) => {
         snap.forEach((child) => {
             total++;
             const v = child.val().votes;
-            if (v && v['GAME1_GROUP'] !== undefined) answered++;
+            if (v && Object.keys(v).some(k => k.startsWith('GAME1_GROUP_'))) answered++;
         });
     }
     const el = document.getElementById('g1-group-progress');
-    if (el) el.innerText = `已完成專屬題：${answered} / ${total} 人`;
+    if (el) el.innerText = `已完成所有專屬題：${answered} / ${total} 人`;
 });
 
 // 共同題資料 + 當前生效題目 id
