@@ -3,7 +3,6 @@ import { db } from "./firebase-config.js";
 
 const ADMIN_PASSWORD = "1025";
 let currentStep = "LOGIN";
-let currentGender = null;
 
 // ==================== Auth ====================
 function initializeAuth() {
@@ -132,29 +131,12 @@ document.querySelectorAll('.step-btn').forEach(btn => {
     });
 });
 
-// ==================== Gender Setting ====================
+// ==================== Gender Setting Status（只顯示已設定與否，不洩露內容）====================
 onValue(ref(db, 'settings/finalGender'), (snapshot) => {
-    currentGender = snapshot.val() || null;
-    document.getElementById('current-gender-display').innerText = currentGender === 'BOY' ? '👦 男寶寶' : currentGender === 'GIRL' ? '👧 女寶寶' : '未設定';
-    
-    document.getElementById('btn-set-boy').classList.toggle('active', currentGender === 'BOY');
-    document.getElementById('btn-set-girl').classList.toggle('active', currentGender === 'GIRL');
-});
-
-document.getElementById('btn-set-boy').addEventListener('click', async () => {
-    try {
-        await set(ref(db, 'settings/finalGender'), 'BOY');
-    } catch (error) {
-        alert('設定失敗: ' + error.message);
-    }
-});
-
-document.getElementById('btn-set-girl').addEventListener('click', async () => {
-    try {
-        await set(ref(db, 'settings/finalGender'), 'GIRL');
-    } catch (error) {
-        alert('設定失敗: ' + error.message);
-    }
+    const isSet = snapshot.exists() && snapshot.val();
+    document.getElementById('current-gender-display').innerText = isSet ? '已設定 ✅' : '未設定 ❌';
+}, (error) => {
+    console.error('載入性別狀態失敗:', error);
 });
 
 // ==================== Vote Monitor ====================
@@ -303,18 +285,23 @@ document.getElementById('btn-sub-score').addEventListener('click', async () => {
 
 // ==================== Reveal Trigger ====================
 document.getElementById('btn-trigger-reveal').addEventListener('click', async () => {
-    if (!currentGender) {
-        alert('請先設定最終性別');
-        return;
-    }
-
     try {
+        // 觸發時先讀取最終性別（控制台全程唔會顯示內容）
+        const snap = await get(ref(db, 'settings/finalGender'));
+        const finalGender = snap.val();
+
+        if (!finalGender) {
+            alert('尚未設定最終性別！請通知知情人喺 gender-setting.html 頁面設定。');
+            return;
+        }
+
         await set(ref(db, 'gameState'), {
             currentStep: 'REVEAL',
             startTimestamp: Date.now(),
-            revealResult: currentGender
+            revealResult: finalGender
         });
     } catch (error) {
+        console.error('觸發失敗:', error);
         alert('觸發失敗: ' + error.message);
     }
 });
