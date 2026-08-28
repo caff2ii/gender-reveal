@@ -232,28 +232,42 @@
             border-color: #f97316;
         }
         
-        /* Phase selector */
-        .phase-select {
-            width: 100%;
-            background: #0d0d0d;
-            border: 2px solid #334155;
-            color: #f8f8f8;
-            padding: 0.75rem;
-            font-family: 'Space Grotesk', system-ui, sans-serif;
-            font-size: 1rem;
+        /* Phase quick-jump buttons (4x3 grid) */
+        .phase-btn {
+            display: block;
+            background: #1a1a1a;
+            border: 1px solid #334155;
+            color: #94a3b8;
+            padding: 0.55rem 0.35rem;
             border-radius: 4px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.7rem;
+            line-height: 1.15;
+            text-align: center;
             cursor: pointer;
-            transition: border-color 0.2s ease;
+            transition: all 0.2s ease;
         }
         
-        .phase-select:focus {
-            outline: none;
-            border-color: #f97316;
+        .phase-btn .phase-num {
+            display: block;
+            font-size: 0.6rem;
+            color: #64748b;
+            margin-bottom: 2px;
         }
         
-        .phase-select option {
-            background: #0d0d0d;
+        .phase-btn:hover {
+            background: #334155;
             color: #f8f8f8;
+        }
+        
+        .phase-btn.current {
+            background: #f97316;
+            border-color: #f97316;
+            color: #0d0d0d;
+        }
+        
+        .phase-btn.current .phase-num {
+            color: rgba(13, 13, 13, 0.6);
         }
     </style>
 </head>
@@ -298,10 +312,10 @@
                     </button>
                     <div class="mt-4">
                         <div class="text-sm text-gray-400 mb-2 font-mono">JUMP TO PHASE</div>
-                        <select id="phase-select" class="phase-select w-full"></select>
-                        <button id="jump-phase-btn" class="control-btn w-full mt-2">
-                            GO TO SELECTED PHASE
-                        </button>
+                        <div id="phase-buttons" class="grid grid-cols-4 gap-2">
+                            <!-- Phase quick-jump buttons will be generated here -->
+                        </div>
+                        <div class="text-xs text-gray-500 mt-2 font-mono">直接撳方格跳轉到該階段。跳返轉/重複階段會先確認。</div>
                     </div>
                 </div>
                 
@@ -397,8 +411,7 @@
         const currentPhaseEl = document.getElementById('current-phase');
         const phaseIndicatorEl = document.getElementById('phase-indicator');
         const nextPhaseBtn = document.getElementById('next-phase-btn');
-        const phaseSelect = document.getElementById('phase-select');
-        const jumpPhaseBtn = document.getElementById('jump-phase-btn');
+        const phaseButtonsContainer = document.getElementById('phase-buttons');
         
         // Game-specific elements
         const game1Controls = document.getElementById('game1-controls');
@@ -445,8 +458,8 @@
             // Setup phase indicator
             renderPhaseIndicator();
             
-            // Setup phase selector
-            renderPhaseSelector();
+            // Setup phase quick-jump buttons
+            renderPhaseButtons();
             
             // Setup event listeners
             setupEventListeners();
@@ -498,27 +511,29 @@
             });
         }
         
-        function renderPhaseSelector() {
+        function renderPhaseButtons() {
             const labels = {
-                ONBOARDING: 'ONBOARDING · Player Registration',
-                BACKGROUND_STORY: 'BACKGROUND STORY · Case Briefing',
-                GAME1_RULES: 'GAME 1 RULES',
-                GAME1_QUIZ: 'GAME 1 QUIZ',
-                GAME1_SETTLE: 'GAME 1 SETTLEMENT',
-                GAME2_RULES: 'GAME 2 RULES',
-                GAME2_BINGO: 'GAME 2 BINGO',
-                GAME2_SETTLE: 'GAME 2 SETTLEMENT',
-                GAME3_RULES: 'GAME 3 RULES',
-                GAME3_TEAM_SELECT: 'GAME 3 TEAM SELECT',
-                FINAL_CHOICE: 'FINAL CHOICE',
-                GRAND_REVEAL: 'GRAND REVEAL'
+                ONBOARDING: 'ONBOARDING',
+                BACKGROUND_STORY: 'STORY',
+                GAME1_RULES: 'G1 RULES',
+                GAME1_QUIZ: 'G1 QUIZ',
+                GAME1_SETTLE: 'G1 SETTLE',
+                GAME2_RULES: 'G2 RULES',
+                GAME2_BINGO: 'G2 BINGO',
+                GAME2_SETTLE: 'G2 SETTLE',
+                GAME3_RULES: 'G3 RULES',
+                GAME3_TEAM_SELECT: 'G3 TEAM',
+                FINAL_CHOICE: 'FINAL',
+                GRAND_REVEAL: 'REVEAL'
             };
-            phaseSelect.innerHTML = '';
-            window.CONFIG.phases.forEach(phase => {
-                const option = document.createElement('option');
-                option.value = phase;
-                option.textContent = labels[phase] || phase;
-                phaseSelect.appendChild(option);
+            phaseButtonsContainer.innerHTML = '';
+            window.CONFIG.phases.forEach((phase, index) => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'phase-btn';
+                btn.dataset.phase = phase;
+                btn.innerHTML = `<span class="phase-num">${String(index + 1).padStart(2, '0')}</span>${labels[phase] || phase}`;
+                phaseButtonsContainer.appendChild(btn);
             });
         }
         
@@ -537,9 +552,10 @@
                 }
             });
             
-            // Keep the phase selector in sync with the current phase
-            phaseSelect.value = currentPhase;
-            jumpPhaseBtn.disabled = !window.CONFIG.phases.includes(currentPhase) || phaseSelect.value === currentPhase;
+            // Highlight the current phase button in the quick-jump grid
+            phaseButtonsContainer.querySelectorAll('.phase-btn').forEach(btn => {
+                btn.classList.toggle('current', btn.dataset.phase === currentPhase);
+            });
             
             // Show/hide game-specific controls
             game1Controls.classList.remove('active');
@@ -613,9 +629,11 @@
                 }
             });
             
-            // Jump to selected phase
-            jumpPhaseBtn.addEventListener('click', () => {
-                const targetPhase = phaseSelect.value;
+            // Phase quick-jump buttons (4x3 grid) - each button jumps directly
+            phaseButtonsContainer.addEventListener('click', (e) => {
+                const btn = e.target.closest('.phase-btn');
+                if (!btn) return;
+                const targetPhase = btn.dataset.phase;
                 if (!window.CONFIG.phases.includes(targetPhase) || targetPhase === currentPhase) {
                     return;
                 }
