@@ -903,6 +903,7 @@
         const muteBtn = document.getElementById('mute-btn');
         const muteIcon = document.getElementById('mute-icon');
         const confettiCanvas = document.getElementById('confetti-canvas');
+        let revealConfetti = null;
         
         // Initialize
         function init() {
@@ -913,6 +914,13 @@
             
             // Setup QR code
             setupQRCode();
+
+            if (typeof confetti === 'function' && confettiCanvas) {
+                revealConfetti = confetti.create(confettiCanvas, {
+                    resize: true,
+                    useWorker: true
+                });
+            }
             
             // Setup event listeners
             setupEventListeners();
@@ -979,9 +987,19 @@
         
         function setupEventListeners() {
             muteBtn.addEventListener('click', toggleMute);
+            document.addEventListener('pointerdown', unlockRevealAudio, { once: true });
+        }
+
+        function unlockRevealAudio() {
+            try {
+                initRevealAudioEngine();
+            } catch (error) {
+                console.warn('Reveal audio is unavailable:', error);
+            }
         }
         
         function toggleMute() {
+            unlockRevealAudio();
             isMuted = !isMuted;
             muteIcon.textContent = isMuted ? '🔇' : '🔊';
             
@@ -1568,16 +1586,20 @@
                 revealAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
             }
             if (revealAudioCtx.state === 'suspended') {
-                revealAudioCtx.resume();
+                revealAudioCtx.resume().catch(error => console.warn('Reveal audio resume blocked:', error));
             }
         }
         
         function playEpicBGM() {
-            initRevealAudioEngine();
-            if (bgmFadeInterval) clearInterval(bgmFadeInterval);
-            epicBgmEl.volume = 0.7;
-            epicBgmEl.currentTime = 0;
-            epicBgmEl.play().catch(e => console.log('Audio play blocked', e));
+            try {
+                initRevealAudioEngine();
+                if (bgmFadeInterval) clearInterval(bgmFadeInterval);
+                epicBgmEl.volume = 0.7;
+                epicBgmEl.currentTime = 0;
+                epicBgmEl.play().catch(e => console.warn('Reveal BGM unavailable:', e));
+            } catch (error) {
+                console.warn('Reveal BGM unavailable:', error);
+            }
         }
         
         function fadeOutEpicBGM(durationMs = 1500) {
@@ -1601,58 +1623,72 @@
         }
         
         function playModernTickSound() {
-            initRevealAudioEngine();
-            const osc = revealAudioCtx.createOscillator();
-            const gain = revealAudioCtx.createGain();
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(240, revealAudioCtx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(45, revealAudioCtx.currentTime + 0.12);
-            
-            gain.gain.setValueAtTime(0.7, revealAudioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, revealAudioCtx.currentTime + 0.12);
-            
-            osc.connect(gain);
-            gain.connect(revealAudioCtx.destination);
-            osc.start();
-            osc.stop(revealAudioCtx.currentTime + 0.12);
+            try {
+                initRevealAudioEngine();
+                const osc = revealAudioCtx.createOscillator();
+                const gain = revealAudioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(240, revealAudioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(45, revealAudioCtx.currentTime + 0.12);
+                gain.gain.setValueAtTime(0.7, revealAudioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, revealAudioCtx.currentTime + 0.12);
+                osc.connect(gain);
+                gain.connect(revealAudioCtx.destination);
+                osc.start();
+                osc.stop(revealAudioCtx.currentTime + 0.12);
+            } catch (error) {
+                console.warn('Reveal tick sound unavailable:', error);
+            }
         }
         
         function playModernImpactSound() {
-            initRevealAudioEngine();
-            const osc = revealAudioCtx.createOscillator();
-            const gain = revealAudioCtx.createGain();
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(150, revealAudioCtx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(30, revealAudioCtx.currentTime + 0.4);
-            
-            gain.gain.setValueAtTime(0.9, revealAudioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, revealAudioCtx.currentTime + 0.4);
-            
-            osc.connect(gain);
-            gain.connect(revealAudioCtx.destination);
-            osc.start();
-            osc.stop(revealAudioCtx.currentTime + 0.4);
+            try {
+                initRevealAudioEngine();
+                const osc = revealAudioCtx.createOscillator();
+                const gain = revealAudioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(150, revealAudioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(30, revealAudioCtx.currentTime + 0.4);
+                gain.gain.setValueAtTime(0.9, revealAudioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, revealAudioCtx.currentTime + 0.4);
+                osc.connect(gain);
+                gain.connect(revealAudioCtx.destination);
+                osc.start();
+                osc.stop(revealAudioCtx.currentTime + 0.4);
+            } catch (error) {
+                console.warn('Reveal impact sound unavailable:', error);
+            }
         }
         
         function launchSideCannons(mainColor, accentColor) {
+            if (!revealConfetti) {
+                console.warn('Reveal confetti library is unavailable.');
+                return;
+            }
+
             const duration = 6 * 1000;
             const end = Date.now() + duration;
             
             (function frame() {
-                confetti({
-                    particleCount: 5,
-                    angle: 60,
-                    spread: 55,
-                    origin: { x: 0, y: 0.85 },
-                    colors: [mainColor, accentColor, '#FFFFFF', '#FFE5EC']
-                });
-                confetti({
-                    particleCount: 5,
-                    angle: 120,
-                    spread: 55,
-                    origin: { x: 1, y: 0.85 },
-                    colors: [mainColor, accentColor, '#FFFFFF', '#FFE5EC']
-                });
+                try {
+                    revealConfetti({
+                        particleCount: 5,
+                        angle: 60,
+                        spread: 55,
+                        origin: { x: 0, y: 0.85 },
+                        colors: [mainColor, accentColor, '#FFFFFF', '#FFE5EC']
+                    });
+                    revealConfetti({
+                        particleCount: 5,
+                        angle: 120,
+                        spread: 55,
+                        origin: { x: 1, y: 0.85 },
+                        colors: [mainColor, accentColor, '#FFFFFF', '#FFE5EC']
+                    });
+                } catch (error) {
+                    console.warn('Reveal confetti failed:', error);
+                    return;
+                }
                 
                 if (Date.now() < end) {
                     revealConfettiAnimId = requestAnimationFrame(frame);
@@ -1763,7 +1799,7 @@
             const blurVal = document.getElementById('blur-val');
             if (blurVal) blurVal.setAttribute('stdDeviation', '0, 0');
             
-            confetti.reset();
+            if (revealConfetti && revealConfetti.reset) revealConfetti.reset();
         }
         
         // Only the host's explicit START GRAND REVEAL press (reveal_triggered_at) should
@@ -1909,6 +1945,7 @@
                     onComplete: () => {
                         w3.style.filter = 'none';
                         w3.classList.add('animate__animated', 'animate__pulse', 'animate__infinite');
+                        launchSideCannons(mainColor, accentColor);
                         showRevealStats(gender);
                     }
                 },
