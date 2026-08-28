@@ -21,8 +21,8 @@ A complete multi-screen interactive party game system for Gender Reveal events, 
 ├── index.html          # Player mobile interface
 ├── display.html        # TV/Projector big screen
 ├── host.html           # Host control dashboard
-├── admin.html          # Content management (password: 1125)
-└── secret.html         # Secret gender setting (password: 1125)
+├── admin.html          # Content management 
+└── secret.html         # Secret gender setting 
 ```
 
 ## Tech Stack
