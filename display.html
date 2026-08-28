@@ -126,6 +126,11 @@
             border-left-color: #b45309;
         }
         
+        /* Highlight pulse applied briefly whenever an item's rank position changes */
+        .leaderboard-item.rank-changed {
+            box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.9), 0 0 16px rgba(249, 115, 22, 0.5);
+        }
+        
         /* Quiz display styling */
         .quiz-option {
             background: rgba(26, 26, 26, 0.9);
@@ -360,21 +365,30 @@
                 </div>
                 
                 <div id="common-quiz-display" class="hidden">
-                    <div class="max-w-4xl mx-auto text-center">
-                        <div id="quiz-stage-indicator" class="font-mono text-xl text-gray-400 mb-8">QUESTION 1/5</div>
-                        
-                        <div id="quiz-question-container" class="mb-12">
-                            <div id="quiz-question" class="tv-heading mb-8 min-h-[200px] flex items-center justify-center"></div>
-                            <div id="quiz-options" class="space-y-4">
-                                <!-- Options will be loaded here -->
+                    <div class="grid grid-cols-3 gap-8">
+                        <div class="col-span-2 text-center">
+                            <div id="quiz-stage-indicator" class="font-mono text-xl text-gray-400 mb-8">QUESTION 1/5</div>
+                            
+                            <div id="quiz-question-container" class="mb-12">
+                                <div id="quiz-question" class="tv-heading mb-8 min-h-[200px] flex items-center justify-center"></div>
+                                <div id="quiz-options" class="space-y-4">
+                                    <!-- Options will be loaded here -->
+                                </div>
+                            </div>
+                            
+                            <div id="quiz-countdown" class="countdown-timer text-orange-500 hidden">15</div>
+                            
+                            <div id="quiz-answer-reveal" class="hidden">
+                                <div class="tv-subheading text-green-500 mb-4">CORRECT ANSWER</div>
+                                <div id="correct-answer" class="tv-heading"></div>
                             </div>
                         </div>
                         
-                        <div id="quiz-countdown" class="countdown-timer text-orange-500 hidden">15</div>
-                        
-                        <div id="quiz-answer-reveal" class="hidden">
-                            <div class="tv-subheading text-green-500 mb-4">CORRECT ANSWER</div>
-                            <div id="correct-answer" class="tv-heading"></div>
+                        <div>
+                            <h3 class="tv-subheading mb-6 font-mono">TOP 10</h3>
+                            <div id="common-quiz-leaderboard" class="space-y-3">
+                                <!-- Leaderboard items will be loaded here -->
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -790,12 +804,54 @@
                 groupQuizDisplay.classList.add('hidden');
                 commonQuizDisplay.classList.remove('hidden');
                 updateCommonQuizDisplay();
+                updateCommonQuizLeaderboard();
             }
+        }
+        
+        // FLIP-animate a leaderboard container: reordered/updated rows glide to their
+        // new position and briefly glow, instead of just snapping into place.
+        function animateLeaderboardUpdate(container, renderFn) {
+            const firstRects = new Map();
+            container.querySelectorAll('[data-player-id]').forEach(el => {
+                firstRects.set(el.dataset.playerId, el.getBoundingClientRect());
+            });
+            
+            renderFn();
+            
+            container.querySelectorAll('[data-player-id]').forEach(el => {
+                const first = firstRects.get(el.dataset.playerId);
+                
+                if (!first) {
+                    // Newly appeared row - fade/slide in
+                    el.style.transition = 'none';
+                    el.style.opacity = '0';
+                    el.style.transform = 'translateY(-12px)';
+                    requestAnimationFrame(() => {
+                        el.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+                        el.style.opacity = '1';
+                        el.style.transform = '';
+                    });
+                    return;
+                }
+                
+                const last = el.getBoundingClientRect();
+                const deltaY = first.top - last.top;
+                
+                if (Math.abs(deltaY) > 1) {
+                    el.style.transition = 'none';
+                    el.style.transform = `translateY(${deltaY}px)`;
+                    requestAnimationFrame(() => {
+                        el.style.transition = 'transform 0.5s ease';
+                        el.style.transform = '';
+                    });
+                    el.classList.add('rank-changed');
+                    setTimeout(() => el.classList.remove('rank-changed'), 800);
+                }
+            });
         }
         
         function updateGroupQuizLeaderboard() {
             const leaderboard = document.getElementById('group-quiz-leaderboard');
-            leaderboard.innerHTML = '';
             
             // Live progress of the self-paced group quiz
             const totalPlayers = Object.keys(players).length;
@@ -805,16 +861,44 @@
             const playerArray = Object.values(players).sort((a, b) => (b.score || 0) - (a.score || 0));
             const top10 = playerArray.slice(0, 10);
             
-            top10.forEach((player, index) => {
-                const div = document.createElement('div');
-                div.className = `leaderboard-item rank-${index + 1} p-4`;
-                div.innerHTML = `
-                    <div class="flex justify-between items-center">
-                        <span class="tv-body">${index + 1}. ${window.GenderRevealUtils.escapeHtml(player.name)}</span>
-                        <span class="tv-body font-mono">${player.score || 0}</span>
-                    </div>
-                `;
-                leaderboard.appendChild(div);
+            animateLeaderboardUpdate(leaderboard, () => {
+                leaderboard.innerHTML = '';
+                top10.forEach((player, index) => {
+                    const div = document.createElement('div');
+                    div.dataset.playerId = player.id;
+                    div.className = `leaderboard-item rank-${index + 1} p-4`;
+                    div.innerHTML = `
+                        <div class="flex justify-between items-center">
+                            <span class="tv-body">${index + 1}. ${window.GenderRevealUtils.escapeHtml(player.name)}</span>
+                            <span class="tv-body font-mono">${player.score || 0}</span>
+                        </div>
+                    `;
+                    leaderboard.appendChild(div);
+                });
+            });
+        }
+        
+        function updateCommonQuizLeaderboard() {
+            const leaderboard = document.getElementById('common-quiz-leaderboard');
+            if (!leaderboard) return;
+            
+            const playerArray = Object.values(players).sort((a, b) => (b.score || 0) - (a.score || 0));
+            const top10 = playerArray.slice(0, 10);
+            
+            animateLeaderboardUpdate(leaderboard, () => {
+                leaderboard.innerHTML = '';
+                top10.forEach((player, index) => {
+                    const div = document.createElement('div');
+                    div.dataset.playerId = player.id;
+                    div.className = `leaderboard-item rank-${index + 1} p-3`;
+                    div.innerHTML = `
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm">${index + 1}. ${window.GenderRevealUtils.escapeHtml(player.name)}</span>
+                            <span class="text-sm font-mono">${player.score || 0}</span>
+                        </div>
+                    `;
+                    leaderboard.appendChild(div);
+                });
             });
         }
         
@@ -972,28 +1056,32 @@
         
         function updateBingoTop10() {
             const top10 = document.getElementById('bingo-top10');
-            top10.innerHTML = '';
             
             const completedPlayers = Object.values(players)
                 .filter(p => (p.bingo_lines || 0) >= 2)
                 .sort((a, b) => (a.bingo_completed_at || 0) - (b.bingo_completed_at || 0))
                 .slice(0, 10);
             
-            completedPlayers.forEach((player, index) => {
-                const div = document.createElement('div');
-                div.className = 'leaderboard-item rank-1 p-3';
-                div.innerHTML = `
-                    <div class="flex justify-between items-center">
-                        <span class="text-sm">${index + 1}. ${window.GenderRevealUtils.escapeHtml(player.name)}</span>
-                        <span class="text-xs font-mono">${window.GenderRevealUtils.formatTimestamp(player.bingo_completed_at)}</span>
-                    </div>
-                `;
-                top10.appendChild(div);
-            });
-            
             if (completedPlayers.length === 0) {
                 top10.innerHTML = '<div class="text-sm text-gray-400">No completions yet</div>';
+                return;
             }
+            
+            animateLeaderboardUpdate(top10, () => {
+                top10.innerHTML = '';
+                completedPlayers.forEach((player, index) => {
+                    const div = document.createElement('div');
+                    div.dataset.playerId = player.id;
+                    div.className = `leaderboard-item rank-${Math.min(index + 1, 3)} p-3`;
+                    div.innerHTML = `
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm">${index + 1}. ${window.GenderRevealUtils.escapeHtml(player.name)}</span>
+                            <span class="text-xs font-mono">${window.GenderRevealUtils.formatTimestamp(player.bingo_completed_at)}</span>
+                        </div>
+                    `;
+                    top10.appendChild(div);
+                });
+            });
         }
         
         function updateBingoHistory() {
