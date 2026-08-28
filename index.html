@@ -1372,11 +1372,15 @@
             quizQuestion.textContent = question.q;
             quizOptions.innerHTML = '';
             
+            // Synced with the host's chosen speed (game_state.option_reveal_step_ms) so
+            // display.html and every player's phone stagger the options identically
+            const revealStepMs = gameState.option_reveal_step_ms || window.CONFIG.game1.optionRevealStepMs;
+            
             const labels = ['A', 'B', 'C', 'D'];
             question.options.forEach((option, index) => {
                 const btn = document.createElement('button');
                 btn.className = 'quiz-option-btn option-enter w-full p-4 rounded-lg text-left transition-colors';
-                btn.style.animationDelay = `${index * 120}ms`;
+                btn.style.animationDelay = `${index * revealStepMs}ms`;
                 btn.innerHTML = `<span class="font-mono text-orange-500 mr-2">${labels[index]}.</span> ${window.GenderRevealUtils.escapeHtml(option)}`;
                 btn.addEventListener('click', (e) => submitAnswer(question, index, stage, e.currentTarget));
                 quizOptions.appendChild(btn);

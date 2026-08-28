@@ -67,6 +67,9 @@ window.CONFIG = {
     commonQuizBaseScore: 1000,
     commonQuizSpeedBonusMultiplier: 33.3,
     commonQuizTimeout: 15,
+    // Default delay (ms) between each option appearing when options are revealed -
+    // overridable live by the host and synced to players/display via game_state.option_reveal_step_ms
+    optionRevealStepMs: 500,
     rank1Reward: "level3",
     rank10Reward: "level3",
     rank11Reward: "level2",

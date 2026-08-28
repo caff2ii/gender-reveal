@@ -328,6 +328,15 @@
                         <button id="show-options-btn" class="control-btn">顯示選項</button>
                         <button id="reveal-answer-btn" class="control-btn">開估</button>
                     </div>
+                    <div class="mt-4 flex items-center gap-3">
+                        <label for="option-reveal-speed" class="text-sm text-gray-400 font-mono">顯示選項速度</label>
+                        <select id="option-reveal-speed" class="input-dark p-2 rounded-lg text-sm">
+                            <option value="300">快 (0.3s/個)</option>
+                            <option value="500">正常 (0.5s/個)</option>
+                            <option value="1000">慢 (1s/個)</option>
+                            <option value="1500">好慢 (1.5s/個)</option>
+                        </select>
+                    </div>
                     <div class="mt-4 text-sm text-gray-400">
                         <div>Question: <span id="quiz-question-num" class="text-white">0</span> / 8</div>
                         <div>Stage: <span id="quiz-stage" class="text-white">GROUP</span></div>
@@ -425,6 +434,7 @@
         const prevQuizStepBtn = document.getElementById('prev-quiz-step-btn');
         const showOptionsBtn = document.getElementById('show-options-btn');
         const revealAnswerBtn = document.getElementById('reveal-answer-btn');
+        const optionRevealSpeedSelect = document.getElementById('option-reveal-speed');
         const quizQuestionNum = document.getElementById('quiz-question-num');
         const quizStage = document.getElementById('quiz-stage');
         const quizDoneCount = document.getElementById('quiz-done-count');
@@ -622,6 +632,13 @@
             quizQuestionNum.textContent = gameState.current_question_index || 0;
             quizStage.textContent = gameState.game1_stage || 'GROUP';
             
+            // Reflect the current option-reveal speed (may have been set from another
+            // host tab/device) without disrupting a selection the host is mid-way through
+            const revealStepMs = gameState.option_reveal_step_ms || window.CONFIG.game1.optionRevealStepMs;
+            if (optionRevealSpeedSelect.value !== String(revealStepMs)) {
+                optionRevealSpeedSelect.value = String(revealStepMs);
+            }
+            
             // Group quiz is self-paced - show how many players finished
             const playerIds = Object.keys(players);
             const doneCount = playerIds.filter(id => players[id].group_quiz_done === true).length;
@@ -715,6 +732,12 @@
             
             revealAnswerBtn.addEventListener('click', () => {
                 revealQuizAnswer();
+            });
+            
+            optionRevealSpeedSelect.addEventListener('change', () => {
+                database.ref(window.CONFIG.dbPaths.gameState).update({
+                    option_reveal_step_ms: parseInt(optionRevealSpeedSelect.value, 10)
+                });
             });
             
             // Game 2 controls

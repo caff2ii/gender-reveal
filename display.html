@@ -170,6 +170,19 @@
             background: rgba(239, 68, 68, 0.1);
         }
         
+        /* Options appear one at a time when the host reveals them - kept in sync
+           with index.html's identical animation, both driven by the same
+           game_state.option_reveal_step_ms delay value. */
+        @keyframes quizOptionEnter {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .quiz-option.option-enter {
+            opacity: 0;
+            animation: quizOptionEnter 0.35s ease forwards;
+        }
+        
         /* Bingo display styling */
         .bingo-phrase-display {
             font-size: clamp(2rem, 4vw, 3.5rem);
@@ -964,14 +977,18 @@
                     quizQuestion.textContent = question.q;
                     quizOptions.innerHTML = '';
                 } else if (revealStage === 1) {
-                    // Countdown is running - show all options and the countdown (players answering)
+                    // Countdown is running - show all options and the countdown (players answering).
+                    // Staggered one-at-a-time reveal, synced with index.html via the same
+                    // game_state.option_reveal_step_ms value the host controls.
                     quizQuestion.textContent = question.q;
                     quizOptions.innerHTML = '';
                     
+                    const revealStepMs = gameState.option_reveal_step_ms || window.CONFIG.game1.optionRevealStepMs;
                     const labels = ['A', 'B', 'C', 'D'];
                     question.options.forEach((option, index) => {
                         const optionDiv = document.createElement('div');
-                        optionDiv.className = 'quiz-option';
+                        optionDiv.className = 'quiz-option option-enter';
+                        optionDiv.style.animationDelay = `${index * revealStepMs}ms`;
                         optionDiv.textContent = `${labels[index]}. ${window.GenderRevealUtils.escapeHtml(option)}`;
                         quizOptions.appendChild(optionDiv);
                     });
