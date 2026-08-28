@@ -884,7 +884,9 @@
                 const level = window.GenderRevealUtils.getClueLevelFromRank(rank);
                 const updatedPlayer = { ...player };
                 window.GenderRevealUtils.giveClue(updatedPlayer, level);
-                updates[player.id] = { unlocked_clues: updatedPlayer.unlocked_clues };
+                // Flattened path keys merge only this field - a nested object value here
+                // would make Firebase REPLACE each player's entire record instead of merging.
+                updates[`${player.id}/unlocked_clues`] = updatedPlayer.unlocked_clues;
             });
             
             if (Object.keys(updates).length > 0) {
@@ -921,7 +923,7 @@
                     window.GenderRevealUtils.giveClue(updatedPlayer, window.CONFIG.game2.bingoZeroLineReward);
                 }
                 
-                updates[playerId] = { unlocked_clues: updatedPlayer.unlocked_clues };
+                updates[`${playerId}/unlocked_clues`] = updatedPlayer.unlocked_clues;
             });
             
             if (Object.keys(updates).length > 0) {

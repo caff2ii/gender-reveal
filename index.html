@@ -1324,12 +1324,23 @@
                     currentPlayer.group_quiz_done = true;
                 }
                 
-                database.ref(`${window.CONFIG.dbPaths.players}/${currentPlayer.id}`).update(updates);
+                // The UI above already reflects the score optimistically - if this write
+                // is ever rejected (e.g. Firebase rules/connection issue) that optimism is
+                // wrong, so surface it instead of silently leaving a score that was never saved.
+                database.ref(`${window.CONFIG.dbPaths.players}/${currentPlayer.id}`).update(updates)
+                    .catch((error) => {
+                        console.error('Failed to save group quiz score:', error);
+                        alert('未能儲存你既分數，請檢查網絡連線: ' + (error && error.message ? error.message : 'unknown error'));
+                    });
                 
                 // Brief pause so the player sees the disabled options, then next question / waiting screen
                 setTimeout(() => loadQuiz(), 600);
             } else {
-                database.ref(`${window.CONFIG.dbPaths.players}/${currentPlayer.id}/score`).set(newScore);
+                database.ref(`${window.CONFIG.dbPaths.players}/${currentPlayer.id}/score`).set(newScore)
+                    .catch((error) => {
+                        console.error('Failed to save common quiz score:', error);
+                        alert('未能儲存你既分數，請檢查網絡連線: ' + (error && error.message ? error.message : 'unknown error'));
+                    });
                 currentPlayer.score = newScore;
             }
         }
@@ -1410,16 +1421,20 @@
         function showGame1Settlement() {
             if (!currentPlayer) return;
             
+            // Show the cached value immediately, then reconcile with a fresh
+            // read below - the cached currentPlayer can go stale if the phone's
+            // browser tab was reloaded/backgrounded mid-quiz.
             document.getElementById('final-score').textContent = currentPlayer.score || 0;
             document.getElementById('final-rank').textContent = 'Calculating...';
-            renderFinalRank();
+            renderFinalScoreAndRank();
             
             renderClueRewardDisplay('clue-reward');
         }
         
-        // Rank isn't stored per-player - derive it by fetching all scores and
-        // sorting, since nothing else in index.html loads the full player list.
-        function renderFinalRank() {
+        // Score and rank aren't reliably available from the cached currentPlayer
+        // (its local copy can go stale), and rank isn't stored per-player at all -
+        // fetch every player fresh from Firebase and derive both from that.
+        function renderFinalScoreAndRank() {
             if (!currentPlayer || !currentPlayer.id) return;
             
             database.ref(window.CONFIG.dbPaths.players).once('value', (snapshot) => {
@@ -1428,10 +1443,16 @@
                     .map(id => ({ id, score: allPlayers[id].score || 0 }))
                     .sort((a, b) => b.score - a.score);
                 const position = ranked.findIndex(p => p.id === currentPlayer.id);
+                
+                if (position >= 0) {
+                    currentPlayer.score = ranked[position].score;
+                    document.getElementById('final-score').textContent = ranked[position].score;
+                }
+                
                 const rankEl = document.getElementById('final-rank');
                 rankEl.textContent = position >= 0 ? `#${position + 1} / ${ranked.length}` : '-';
             }, (error) => {
-                console.warn('Could not calculate rank:', error);
+                console.warn('Could not calculate final score/rank:', error);
                 document.getElementById('final-rank').textContent = '-';
             });
         }
