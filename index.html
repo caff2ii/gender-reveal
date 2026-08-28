@@ -677,6 +677,10 @@
                         localStorage.removeItem(window.CONFIG.player.localStorageKey);
                         showOnboarding();
                     }
+                }, (error) => {
+                    // Read failed (e.g. connection/rules) - let the player retry from the form
+                    console.warn('Could not verify saved player:', error);
+                    showOnboarding();
                 });
             } else {
                 showOnboarding();
@@ -716,6 +720,8 @@
                 if (currentPlayer) {
                     updateGameScreen();
                 }
+            }, (error) => {
+                console.warn('Game state listener error:', error);
             });
         }
         
@@ -727,6 +733,8 @@
                     loadGroupQuizQuestions();
                     loadCommonQuizQuestions();
                 }
+            }, (error) => {
+                console.warn('Questions listener error:', error);
             });
         }
         
@@ -737,6 +745,8 @@
                 if (currentPlayer && currentPhase === 'GAME2_BINGO') {
                     updateBingoDisplay();
                 }
+            }, (error) => {
+                console.warn('Bingo phrases listener error:', error);
             });
         }
         
@@ -747,6 +757,8 @@
                 if (currentPlayer) {
                     updateClueLibrary();
                 }
+            }, (error) => {
+                console.warn('Clues listener error:', error);
             });
         }
         
@@ -896,15 +908,27 @@
                 const newPlayerRef = database.ref(window.CONFIG.dbPaths.players).push();
                 playerData.id = newPlayerRef.key;
                 
-                return newPlayerRef.set(playerData).then(() => {
-                    currentPlayer = playerData;
-                    try {
-                        localStorage.setItem(window.CONFIG.player.localStorageKey, JSON.stringify(currentPlayer));
-                    } catch (e) {
-                        // Storage may be unavailable (privacy mode) - registration still succeeded
-                        console.warn('Could not save player session locally:', e);
-                    }
-                    showGameScreens();
+                // Move to the waiting screen IMMEDIATELY - RTDB applies the write
+                // locally right away, so the UI must not wait for the server
+                // acknowledgement (a slow/blocked connection would otherwise
+                // freeze the form and let repeated clicks pile up players).
+                currentPlayer = playerData;
+                try {
+                    localStorage.setItem(window.CONFIG.player.localStorageKey, JSON.stringify(currentPlayer));
+                } catch (e) {
+                    // Storage may be unavailable (privacy mode) - registration still succeeded
+                    console.warn('Could not save player session locally:', e);
+                }
+                showGameScreens();
+                
+                // Surface real write failures (e.g. permission denied) afterwards
+                newPlayerRef.set(playerData).catch((error) => {
+                    console.error('Saving player to Firebase failed:', error);
+                    alert('Your registration could not be saved: ' + (error && error.message ? error.message : 'connection problem') + '. Please try again.');
+                    // Roll back the local session so the player can retry
+                    try { localStorage.removeItem(window.CONFIG.player.localStorageKey); } catch (e2) {}
+                    currentPlayer = null;
+                    showOnboarding();
                 });
             }).catch((error) => {
                 console.error('Registration failed:', error);
@@ -954,6 +978,9 @@
                 } else {
                     alert('PIN not found. Please check and try again.');
                 }
+            }, (error) => {
+                console.error('PIN lookup failed:', error);
+                alert('Could not look up your PIN: ' + (error && error.message ? error.message : 'connection problem'));
             });
         }
         
