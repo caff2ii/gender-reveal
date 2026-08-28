@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gender Reveal Party - Host Control</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
+    
+    <!-- Firebase -->
+    <script src="https://cdn.jsdelivr.net/npm/firebase@10.8.0/firebase-app-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/firebase@10.8.0/firebase-database-compat.js"></script>
+    
+    <!-- Howler.js -->
+    <script src="https://cdn.jsdelivr.net/npm/howler@2.2.4/dist/howler.min.js"></script>
+    
+    <!-- Config -->
+    <script src="config.js"></script>
+    
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Space Grotesk', system-ui, sans-serif;
+            background-color: #0d0d0d;
+            color: #f8f8f8;
+            min-height: 100vh;
+        }
+        
+        .font-mono {
+            font-family: 'IBM Plex Mono', monospace;
+        }
+        
+        /* Dashboard styling */
+        .dashboard {
+            background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
+            min-height: 100vh;
+        }
+        
+        .dashboard-card {
+            background: rgba(26, 26, 26, 0.8);
+            border: 1px solid #334155;
+            backdrop-filter: blur(10px);
+        }
+        
+        /* Phase indicator */
+        .phase-indicator {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .phase-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #334155;
+            transition: all 0.3s ease;
+        }
+        
+        .phase-dot.active {
+            background: #f97316;
+            box-shadow: 0 0 10px rgba(249, 115, 22, 0.5);
+        }
+        
+        .phase-dot.completed {
+            background: #22c55e;
+        }
+        
+        /* Control buttons */
+        .control-btn {
+            background: #334155;
+            color: #f8f8f8;
+            font-weight: 600;
+            padding: 1rem 1.5rem;
+            border: 2px solid #334155;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        
+        .control-btn:hover {
+            background: #475569;
+            transform: translateY(-2px);
+        }
+        
+        .control-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .control-btn.primary {
+            background: #f97316;
+            border-color: #f97316;
+            color: #0d0d0d;
+        }
+        
+        .control-btn.primary:hover {
+            background: #ea580c;
+        }
+        
+        .control-btn.danger {
+            background: #ef4444;
+            border-color: #ef4444;
+        }
+        
+        .control-btn.danger:hover {
+            background: #dc2626;
+        }
+        
+        /* Status badges */
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+        
+        .status-badge.active {
+            background: rgba(249, 115, 22, 0.2);
+            color: #f97316;
+            border: 1px solid #f97316;
+        }
+        
+        .status-badge.completed {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+            border: 1px solid #22c55e;
+        }
+        
+        /* Player count display */
+        .player-count {
+            font-size: 3rem;
+            font-weight: 700;
+            font-family: 'IBM Plex Mono', monospace;
+        }
+        
+        /* Loading state */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #334155;
+            border-top-color: #f97316;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Panel styling */
+        .panel {
+            background: rgba(26, 26, 26, 0.6);
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 1.5rem;
+        }
+        
+        .panel-header {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.875rem;
+            color: #94a3b8;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #334155;
+        }
+        
+        /* Game-specific controls */
+        .game-controls {
+            display: none;
+        }
+        
+        .game-controls.active {
+            display: block;
+        }
+        
+        /* Modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background: #1a1a1a;
+            border: 2px solid #334155;
+            border-radius: 8px;
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+        }
+        
+        /* Input styling */
+        .input-dark {
+            background: #0d0d0d;
+            border: 1px solid #334155;
+            color: #f8f8f8;
+            padding: 0.75rem;
+            border-radius: 4px;
+        }
+        
+        .input-dark:focus {
+            outline: none;
+            border-color: #f97316;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- Loading State -->
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+        </div>
+        
+        <!-- Main Dashboard -->
+        <div id="main-content" class="hidden dashboard">
+            <div class="container mx-auto px-4 py-8">
+                <!-- Header -->
+                <div class="flex justify-between items-center mb-8">
+                    <div>
+                        <h1 class="text-3xl font-bold mb-2">HOST CONTROL PANEL</h1>
+                        <p class="text-gray-400 font-mono text-sm">GENDER REVEAL PARTY INVESTIGATION</p>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-sm text-gray-400 mb-1">CONNECTED PLAYERS</div>
+                        <div id="player-count" class="player-count text-orange-500">0</div>
+                    </div>
+                </div>
+                
+                <!-- Phase Indicator -->
+                <div class="panel mb-8">
+                    <div class="panel-header">CURRENT PHASE</div>
+                    <div class="flex items-center justify-between">
+                        <div id="current-phase" class="text-2xl font-bold text-orange-500">ONBOARDING</div>
+                        <div id="phase-indicator" class="phase-indicator">
+                            <!-- Phase dots will be generated here -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Main Controls -->
+                <div class="panel mb-8">
+                    <div class="panel-header">PHASE CONTROL</div>
+                    <button id="next-phase-btn" class="control-btn primary w-full text-xl">
+                        NEXT PHASE →
+                    </button>
+                </div>
+                
+                <!-- Game-Specific Controls -->
+                <div id="game1-controls" class="game-controls panel mb-8">
+                    <div class="panel-header">GAME 1: QUIZ CONTROL</div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <button id="next-quiz-step-btn" class="control-btn">NEXT QUIZ STEP</button>
+                        <button id="start-countdown-btn" class="control-btn">START COUNTDOWN</button>
+                    </div>
+                    <div class="mt-4 text-sm text-gray-400">
+                        <div>Question: <span id="quiz-question-num" class="text-white">0</span> / 8</div>
+                        <div>Stage: <span id="quiz-stage" class="text-white">GROUP</span></div>
+                    </div>
+                </div>
+                
+                <div id="game2-controls" class="game-controls panel mb-8">
+                    <div class="panel-header">GAME 2: BINGO CONTROL</div>
+                    <div class="mb-4">
+                        <div class="text-lg mb-2">Current Phrase:</div>
+                        <div id="current-bingo-phrase" class="text-2xl font-bold text-orange-500">-</div>
+                    </div>
+                    <button id="draw-bingo-btn" class="control-btn primary w-full">DRAW NEXT PHRASE</button>
+                    <div class="mt-4 text-sm text-gray-400">
+                        <div>Drawn: <span id="bingo-drawn-count" class="text-white">0</span></div>
+                        <div>Completed: <span id="bingo-completed-count" class="text-white">0</span> / 10</div>
+                    </div>
+                </div>
+                
+                <div id="game3-controls" class="game-controls panel mb-8">
+                    <div class="panel-header">GAME 3: TEAM BATTLE</div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <button id="team-boy-wins-btn" class="control-btn bg-blue-600 border-blue-600">TEAM BOY WINS</button>
+                        <button id="team-girl-wins-btn" class="control-btn bg-pink-600 border-pink-600">TEAM GIRL WINS</button>
+                    </div>
+                </div>
+                
+                <div id="reveal-controls" class="game-controls panel mb-8">
+                    <div class="panel-header">GRAND REVEAL</div>
+                    <button id="start-reveal-btn" class="control-btn primary w-full text-xl">
+                        🎉 START GRAND REVEAL
+                    </button>
+                </div>
+                
+                <!-- Reset Controls -->
+                <div class="panel">
+                    <div class="panel-header">DANGER ZONE</div>
+                    <button id="reset-btn" class="control-btn danger w-full">RESET ALL TEST DATA</button>
+                    <p class="text-xs text-gray-500 mt-2">Clears players and game state only. Preserves questions, clues, and secret gender.</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Reset Confirmation Modal -->
+        <div id="reset-modal" class="modal hidden">
+            <div class="modal-content">
+                <h2 class="text-xl font-bold mb-4">⚠️ CONFIRM RESET</h2>
+                <p class="text-gray-400 mb-6">This will reset all players and game state. Questions, clues, and secret gender will be preserved.</p>
+                <div class="flex gap-4">
+                    <button id="confirm-reset-btn" class="control-btn danger flex-1">CONFIRM RESET</button>
+                    <button id="cancel-reset-btn" class="control-btn flex-1">CANCEL</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Global database variable
+        let database;
+        
+        // Firebase initialization with error handling
+        try {
+            if (!firebase.apps.length) {
+                firebase.initializeApp(window.CONFIG.firebaseConfig);
+            }
+            database = firebase.database();
+            console.log('Firebase initialized successfully');
+        } catch (error) {
+            console.error('Firebase initialization error:', error);
+            alert('Firebase initialization failed. Please check your internet connection.');
+        }
+        
+        // State
+        let currentPhase = 'ONBOARDING';
+        let gameState = {};
+        let players = {};
+        
+        // DOM Elements
+        const loadingEl = document.getElementById('loading');
+        const mainContentEl = document.getElementById('main-content');
+        const playerCountEl = document.getElementById('player-count');
+        const currentPhaseEl = document.getElementById('current-phase');
+        const phaseIndicatorEl = document.getElementById('phase-indicator');
+        const nextPhaseBtn = document.getElementById('next-phase-btn');
+        
+        // Game-specific elements
+        const game1Controls = document.getElementById('game1-controls');
+        const game2Controls = document.getElementById('game2-controls');
+        const game3Controls = document.getElementById('game3-controls');
+        const revealControls = document.getElementById('reveal-controls');
+        
+        const nextQuizStepBtn = document.getElementById('next-quiz-step-btn');
+        const startCountdownBtn = document.getElementById('start-countdown-btn');
+        const quizQuestionNum = document.getElementById('quiz-question-num');
+        const quizStage = document.getElementById('quiz-stage');
+        
+        const drawBingoBtn = document.getElementById('draw-bingo-btn');
+        const currentBingoPhrase = document.getElementById('current-bingo-phrase');
+        const bingoDrawnCount = document.getElementById('bingo-drawn-count');
+        const bingoCompletedCount = document.getElementById('bingo-completed-count');
+        
+        const teamBoyWinsBtn = document.getElementById('team-boy-wins-btn');
+        const teamGirlWinsBtn = document.getElementById('team-girl-wins-btn');
+        
+        const startRevealBtn = document.getElementById('start-reveal-btn');
+        
+        const resetBtn = document.getElementById('reset-btn');
+        const resetModal = document.getElementById('reset-modal');
+        const confirmResetBtn = document.getElementById('confirm-reset-btn');
+        const cancelResetBtn = document.getElementById('cancel-reset-btn');
+        
+        // Initialize
+        function init() {
+            console.log('Host initialization starting...');
+            
+            // Check if database is available
+            if (!database) {
+                console.error('Database not initialized');
+                loadingEl.innerHTML = '<div class="text-red-500">Firebase initialization failed. Please refresh the page.</div>';
+                return;
+            }
+            
+            // Setup Firebase listeners
+            setupGameStateListener();
+            setupPlayersListener();
+            
+            // Setup phase indicator
+            renderPhaseIndicator();
+            
+            // Setup event listeners
+            setupEventListeners();
+            
+            // Hide loading, show main content
+            loadingEl.classList.add('hidden');
+            mainContentEl.classList.remove('hidden');
+            
+            console.log('Host initialization complete');
+        }
+        
+        function setupGameStateListener() {
+            if (!database) {
+                console.error('Cannot setup game state listener - database not initialized');
+                return;
+            }
+            database.ref(window.CONFIG.dbPaths.gameState).on('value', (snapshot) => {
+                gameState = snapshot.val() || {
+                    current_phase: 'ONBOARDING',
+                    current_question_index: 0,
+                    current_bingo_phrase: '',
+                    drawn_bingo_phrases: []
+                };
+                currentPhase = gameState.current_phase || 'ONBOARDING';
+                updateUI();
+            });
+        }
+        
+        function setupPlayersListener() {
+            if (!database) {
+                console.error('Cannot setup players listener - database not initialized');
+                return;
+            }
+            database.ref(window.CONFIG.dbPaths.players).on('value', (snapshot) => {
+                players = snapshot.val() || {};
+                playerCountEl.textContent = Object.keys(players).length;
+                updateBingoStats();
+            });
+        }
+        
+        function renderPhaseIndicator() {
+            phaseIndicatorEl.innerHTML = '';
+            window.CONFIG.phases.forEach((phase, index) => {
+                const dot = document.createElement('div');
+                dot.className = 'phase-dot';
+                dot.dataset.phase = phase;
+                phaseIndicatorEl.appendChild(dot);
+            });
+        }
+        
+        function updateUI() {
+            // Update current phase display
+            currentPhaseEl.textContent = currentPhase;
+            
+            // Update phase indicator
+            const currentIndex = window.CONFIG.phases.indexOf(currentPhase);
+            document.querySelectorAll('.phase-dot').forEach((dot, index) => {
+                dot.classList.remove('active', 'completed');
+                if (index === currentIndex) {
+                    dot.classList.add('active');
+                } else if (index < currentIndex) {
+                    dot.classList.add('completed');
+                }
+            });
+            
+            // Show/hide game-specific controls
+            game1Controls.classList.remove('active');
+            game2Controls.classList.remove('active');
+            game3Controls.classList.remove('active');
+            revealControls.classList.remove('active');
+            
+            switch(currentPhase) {
+                case 'GAME1_QUIZ':
+                    game1Controls.classList.add('active');
+                    updateGame1UI();
+                    break;
+                case 'GAME2_BINGO':
+                    game2Controls.classList.add('active');
+                    updateGame2UI();
+                    break;
+                case 'GAME3_TEAM_SELECT':
+                    game3Controls.classList.add('active');
+                    break;
+                case 'GRAND_REVEAL':
+                    revealControls.classList.add('active');
+                    break;
+            }
+            
+            // Disable next phase button if at the end
+            nextPhaseBtn.disabled = currentPhase === 'GRAND_REVEAL';
+        }
+        
+        function updateGame1UI() {
+            quizQuestionNum.textContent = gameState.current_question_index || 0;
+            quizStage.textContent = gameState.game1_stage || 'GROUP';
+        }
+        
+        function updateGame2UI() {
+            currentBingoPhrase.textContent = gameState.current_bingo_phrase || '-';
+            
+            const drawnPhrases = gameState.drawn_bingo_phrases || {};
+            bingoDrawnCount.textContent = Object.keys(drawnPhrases).length;
+            
+            // Count completed players (2 lines)
+            let completedCount = 0;
+            Object.values(players).forEach(player => {
+                if (player.bingo_lines >= 2) {
+                    completedCount++;
+                }
+            });
+            bingoCompletedCount.textContent = completedCount;
+        }
+        
+        function updateBingoStats() {
+            if (currentPhase === 'GAME2_BINGO') {
+                updateGame2UI();
+            }
+        }
+        
+        function setupEventListeners() {
+            // Next phase button
+            nextPhaseBtn.addEventListener('click', () => {
+                const currentIndex = window.CONFIG.phases.indexOf(currentPhase);
+                if (currentIndex < window.CONFIG.phases.length - 1) {
+                    const nextPhase = window.CONFIG.phases[currentIndex + 1];
+                    advanceToPhase(nextPhase);
+                }
+            });
+            
+            // Game 1 controls
+            nextQuizStepBtn.addEventListener('click', () => {
+                advanceQuizStep();
+            });
+            
+            startCountdownBtn.addEventListener('click', () => {
+                startQuizCountdown();
+            });
+            
+            // Game 2 controls
+            drawBingoBtn.addEventListener('click', () => {
+                drawNextBingoPhrase();
+            });
+            
+            // Game 3 controls
+            teamBoyWinsBtn.addEventListener('click', () => {
+                setGame3Winner('BOY');
+            });
+            
+            teamGirlWinsBtn.addEventListener('click', () => {
+                setGame3Winner('GIRL');
+            });
+            
+            // Reveal controls
+            startRevealBtn.addEventListener('click', () => {
+                startGrandReveal();
+            });
+            
+            // Reset controls
+            resetBtn.addEventListener('click', () => {
+                resetModal.classList.remove('hidden');
+            });
+            
+            confirmResetBtn.addEventListener('click', () => {
+                resetGameData();
+                resetModal.classList.add('hidden');
+            });
+            
+            cancelResetBtn.addEventListener('click', () => {
+                resetModal.classList.add('hidden');
+            });
+        }
+        
+        function advanceToPhase(phase) {
+            database.ref(window.CONFIG.dbPaths.gameState).update({
+                current_phase: phase
+            });
+        }
+        
+        function advanceQuizStep() {
+            const currentStage = gameState.game1_stage || 'GROUP';
+            const currentIndex = gameState.current_question_index || 0;
+            
+            if (currentStage === 'GROUP') {
+                // Check if group quiz is done (3 questions per group)
+                if (currentIndex >= 2) {
+                    // Move to common quiz
+                    database.ref(window.CONFIG.dbPaths.gameState).update({
+                        game1_stage: 'COMMON',
+                        current_question_index: 0
+                    });
+                } else {
+                    // Next group question
+                    database.ref(window.CONFIG.dbPaths.gameState).update({
+                        current_question_index: currentIndex + 1
+                    });
+                }
+            } else {
+                // Common quiz
+                if (currentIndex >= 4) {
+                    // Quiz complete, move to settlement
+                    advanceToPhase('GAME1_SETTLE');
+                } else {
+                    // Next common question
+                    database.ref(window.CONFIG.dbPaths.gameState).update({
+                        current_question_index: currentIndex + 1
+                    });
+                }
+            }
+        }
+        
+        function startQuizCountdown() {
+            // This would trigger a countdown on the display
+            // For now, we'll just advance the reveal stage
+            const currentRevealStage = gameState.common_reveal_stage || 0;
+            database.ref(window.CONFIG.dbPaths.gameState).update({
+                common_reveal_stage: currentRevealStage + 1
+            });
+        }
+        
+        function drawNextBingoPhrase() {
+            // Get all available phrases
+            database.ref('bingo_phrases').once('value', (snapshot) => {
+                const allPhrases = snapshot.val() || {};
+                const drawnPhrases = gameState.drawn_bingo_phrases || {};
+                
+                // Find phrases that haven't been drawn
+                const availablePhrases = Object.keys(allPhrases).filter(key => 
+                    !drawnPhrases[key]
+                );
+                
+                if (availablePhrases.length === 0) {
+                    alert('All phrases have been drawn!');
+                    return;
+                }
+                
+                // Randomly select one
+                const randomKey = availablePhrases[Math.floor(Math.random() * availablePhrases.length)];
+                const selectedPhrase = allPhrases[randomKey];
+                
+                // Update game state
+                const updateData = {
+                    current_bingo_phrase: selectedPhrase
+                };
+                
+                // Add to drawn phrases with timestamp
+                const drawnEntry = {};
+                drawnEntry[randomKey] = {
+                    phrase: selectedPhrase,
+                    drawn_at: firebase.database.ServerValue.TIMESTAMP
+                };
+                
+                database.ref(window.CONFIG.dbPaths.gameState).update(updateData);
+                database.ref(`${window.CONFIG.dbPaths.gameState}/drawn_bingo_phrases`).update(drawnEntry);
+            });
+        }
+        
+        function setGame3Winner(team) {
+            database.ref(window.CONFIG.dbPaths.gameState).update({
+                winning_team: team
+            });
+            
+            // Distribute clues to winning team
+            distributeGame3Rewards(team);
+            
+            // Advance to final choice
+            setTimeout(() => {
+                advanceToPhase('FINAL_CHOICE');
+            }, 2000);
+        }
+        
+        function distributeGame3Rewards(winningTeam) {
+            Object.keys(players).forEach(playerId => {
+                const player = players[playerId];
+                if (player.team === winningTeam) {
+                    // Give Lv3 + Lv2 clues
+                    const updatedPlayer = { ...player };
+                    window.GenderRevealUtils.giveClue(updatedPlayer, 'level3');
+                    window.GenderRevealUtils.giveClue(updatedPlayer, 'level2');
+                    database.ref(`${window.CONFIG.dbPaths.players}/${playerId}`).update({
+                        unlocked_clues: updatedPlayer.unlocked_clues
+                    });
+                }
+            });
+        }
+        
+        function startGrandReveal() {
+            database.ref(window.CONFIG.dbPaths.gameState).update({
+                reveal_triggered_at: firebase.database.ServerValue.TIMESTAMP
+            });
+        }
+        
+        function resetGameData() {
+            if (confirm('Are you sure you want to reset all game data? This will clear all players and game state.')) {
+                // Clear players
+                database.ref(window.CONFIG.dbPaths.players).remove();
+                
+                // Reset game state
+                database.ref(window.CONFIG.dbPaths.gameState).set({
+                    current_phase: 'ONBOARDING',
+                    current_question_index: 0,
+                    current_bingo_phrase: '',
+                    drawn_bingo_phrases: [],
+                    game1_stage: 'GROUP',
+                    common_reveal_stage: 0,
+                    winning_team: '',
+                    reveal_triggered_at: null
+                });
+                
+                alert('Game data has been reset.');
+            }
+        }
+        
+        // Start initialization when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+    </script>
+</body>
+</html>

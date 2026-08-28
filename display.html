@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gender Reveal Party - Display</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
+    
+    <!-- Firebase -->
+    <script src="https://cdn.jsdelivr.net/npm/firebase@10.8.0/firebase-app-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/firebase@10.8.0/firebase-database-compat.js"></script>
+    
+    <!-- Howler.js -->
+    <script src="https://cdn.jsdelivr.net/npm/howler@2.2.4/dist/howler.min.js"></script>
+    
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+    
+    <!-- QR Code -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
+    <!-- Config -->
+    <script src="config.js"></script>
+    
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Space Grotesk', system-ui, sans-serif;
+            background-color: #0d0d0d;
+            color: #f8f8f8;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .font-mono {
+            font-family: 'IBM Plex Mono', monospace;
+        }
+        
+        /* TV-optimized large typography */
+        .tv-heading {
+            font-size: clamp(2rem, 5vw, 4rem);
+            font-weight: 700;
+            line-height: 1.1;
+        }
+        
+        .tv-subheading {
+            font-size: clamp(1.5rem, 3vw, 2.5rem);
+            font-weight: 600;
+        }
+        
+        .tv-body {
+            font-size: clamp(1rem, 2vw, 1.5rem);
+        }
+        
+        /* Cinematic styling */
+        .cinematic-container {
+            background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
+            min-height: 100vh;
+            position: relative;
+        }
+        
+        .cinematic-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                linear-gradient(rgba(51, 65, 85, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(51, 65, 85, 0.05) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+        }
+        
+        /* Leaderboard styling */
+        .leaderboard-item {
+            background: rgba(26, 26, 26, 0.8);
+            border-left: 4px solid #334155;
+            transition: all 0.3s ease;
+        }
+        
+        .leaderboard-item.rank-1 {
+            border-left-color: #fbbf24;
+            background: rgba(251, 191, 36, 0.1);
+        }
+        
+        .leaderboard-item.rank-2 {
+            border-left-color: #94a3b8;
+        }
+        
+        .leaderboard-item.rank-3 {
+            border-left-color: #b45309;
+        }
+        
+        /* Quiz display styling */
+        .quiz-option {
+            background: rgba(26, 26, 26, 0.9);
+            border: 2px solid #334155;
+            font-size: clamp(1.2rem, 2.5vw, 2rem);
+            padding: 1.5rem 2rem;
+            margin: 0.5rem 0;
+            transition: all 0.3s ease;
+        }
+        
+        .quiz-option.reveal {
+            border-color: #f97316;
+            background: rgba(249, 115, 22, 0.1);
+        }
+        
+        .quiz-option.correct {
+            border-color: #22c55e;
+            background: rgba(34, 197, 94, 0.1);
+        }
+        
+        .quiz-option.wrong {
+            border-color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+        
+        /* Bingo display styling */
+        .bingo-phrase-display {
+            font-size: clamp(2rem, 4vw, 3.5rem);
+            font-weight: 700;
+            text-align: center;
+            padding: 2rem;
+            background: rgba(26, 26, 26, 0.9);
+            border: 3px solid #334155;
+        }
+        
+        /* Countdown timer */
+        .countdown-timer {
+            font-size: clamp(4rem, 10vw, 8rem);
+            font-weight: 700;
+            font-family: 'IBM Plex Mono', monospace;
+        }
+        
+        /* Mute button */
+        .mute-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: rgba(26, 26, 26, 0.9);
+            border: 2px solid #334155;
+            color: #f8f8f8;
+            padding: 10px 15px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .mute-btn:hover {
+            background: #334155;
+        }
+        
+        /* Loading state */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid #334155;
+            border-top-color: #f97316;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Phase transitions */
+        .phase-transition {
+            animation: slideIn 0.5s ease;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Reveal animation */
+        .reveal-text {
+            font-size: clamp(4rem, 15vw, 12rem);
+            font-weight: 700;
+            text-align: center;
+            animation: revealPop 0.5s ease;
+        }
+        
+        @keyframes revealPop {
+            0% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        /* Progress indicators */
+        .progress-bar {
+            height: 8px;
+            background: #1a1a1a;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #f97316, #ea580c);
+            transition: width 0.3s ease;
+        }
+        
+        /* Input styling */
+        .input-dark {
+            background: #0d0d0d;
+            border: 1px solid #334155;
+            color: #f8f8f8;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+        }
+        
+        .input-dark:focus {
+            outline: none;
+            border-color: #f97316;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- Loading State -->
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+        </div>
+        
+        <!-- Mute Button -->
+        <button id="mute-btn" class="mute-btn hidden">
+            <span id="mute-icon">🔊</span>
+        </button>
+        
+        <!-- Main Content -->
+        <div id="main-content" class="hidden cinematic-container p-8">
+            <!-- Onboarding Screen -->
+            <div id="onboarding-screen" class="phase-transition">
+                <div class="text-center mb-12">
+                    <h1 class="tv-heading mb-4">GENDER REVEAL</h1>
+                    <p class="tv-subheading text-gray-400 font-mono">INVESTIGATION PARTY</p>
+                </div>
+                
+                <div class="flex justify-center gap-12 items-start">
+                    <div class="text-center">
+                        <div id="qr-code" class="bg-white p-4 rounded-lg inline-block mb-4"></div>
+                        <p class="tv-body font-mono text-gray-400">SCAN TO JOIN</p>
+                    </div>
+                    
+                    <div class="text-center">
+                        <div id="player-count" class="tv-heading text-orange-500 mb-4">0</div>
+                        <p class="tv-body font-mono text-gray-400">AGENTS CONNECTED</p>
+                        <div id="join-url" class="mt-4 p-4 bg-gray-800 rounded-lg font-mono text-sm break-all max-w-md"></div>
+                    </div>
+                </div>
+                
+                <div class="text-center mt-12">
+                    <div class="tv-subheading animate-pulse text-orange-500">WAITING FOR AGENTS...</div>
+                </div>
+            </div>
+            
+            <!-- Background Story Screen -->
+            <div id="background-story-screen" class="hidden phase-transition">
+                <div class="max-w-4xl mx-auto text-center">
+                    <h2 class="tv-heading mb-8 font-mono text-orange-500">CASE BRIEFING</h2>
+                    <div class="bg-gray-800/50 p-12 rounded-lg border border-gray-700">
+                        <p class="tv-body leading-relaxed mb-8">
+                            大家而家會化身成為一個偵探，參加呢個派對既目標就係去揭破一個驚天大秘密：『BB 既性別』。
+                        </p>
+                        <p class="tv-body leading-relaxed mb-8">
+                            係呢個過程入面，你將會受到不同既考驗，鬥智鬥力，最後到達決戰之地，帶住你認為係岩既答案，與共同答案既同伴連成一線，對抗另一隊自認為岩既隊伍。
+                        </p>
+                        <p class="tv-heading text-orange-500">
+                            到底係男仔，定係女仔呢？一切一切就等你黎揭曉啦！！！！
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Game 1 Rules Screen -->
+            <div id="game1-rules-screen" class="hidden phase-transition">
+                <div class="max-w-4xl mx-auto">
+                    <h2 class="tv-heading mb-8 font-mono text-orange-500">PHASE 1: INTELLIGENCE TEST</h2>
+                    <div class="grid grid-cols-3 gap-8">
+                        <div class="bg-gray-800/50 p-8 rounded-lg border border-gray-700 text-center">
+                            <div class="text-6xl mb-4">📋</div>
+                            <h3 class="tv-subheading mb-4">專屬考驗</h3>
+                            <p class="tv-body text-gray-400">3題 Group Quiz</p>
+                        </div>
+                        <div class="bg-gray-800/50 p-8 rounded-lg border border-gray-700 text-center">
+                            <div class="text-6xl mb-4">🧠</div>
+                            <h3 class="tv-subheading mb-4">共同考驗</h3>
+                            <p class="tv-body text-gray-400">5題 Common Quiz</p>
+                        </div>
+                        <div class="bg-gray-800/50 p-8 rounded-lg border border-gray-700 text-center">
+                            <div class="text-6xl mb-4">🏆</div>
+                            <h3 class="tv-subheading mb-4">獎勵</h3>
+                            <p class="tv-body text-gray-400">線索等級</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Game 1 Quiz Screen -->
+            <div id="game1-quiz-screen" class="hidden phase-transition">
+                <div id="group-quiz-display" class="hidden">
+                    <h2 class="tv-heading mb-8 font-mono text-orange-500">專屬考驗進行中</h2>
+                    <div class="max-w-2xl mx-auto">
+                        <h3 class="tv-subheading mb-6">TOP 10 AGENTS</h3>
+                        <div id="group-quiz-leaderboard" class="space-y-4">
+                            <!-- Leaderboard items will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="common-quiz-display" class="hidden">
+                    <div class="max-w-4xl mx-auto text-center">
+                        <div id="quiz-stage-indicator" class="font-mono text-xl text-gray-400 mb-8">QUESTION 1/5</div>
+                        
+                        <div id="quiz-question-container" class="mb-12">
+                            <div id="quiz-question" class="tv-heading mb-8 min-h-[200px] flex items-center justify-center"></div>
+                            <div id="quiz-options" class="space-y-4">
+                                <!-- Options will be loaded here -->
+                            </div>
+                        </div>
+                        
+                        <div id="quiz-countdown" class="countdown-timer text-orange-500 hidden">15</div>
+                        
+                        <div id="quiz-answer-reveal" class="hidden">
+                            <div class="tv-subheading text-green-500 mb-4">CORRECT ANSWER</div>
+                            <div id="correct-answer" class="tv-heading"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Game 1 Settlement Screen -->
+            <div id="game1-settle-screen" class="hidden phase-transition">
+                <div class="max-w-4xl mx-auto text-center">
+                    <h2 class="tv-heading mb-8 font-mono text-orange-500">INTELLIGENCE TEST COMPLETE</h2>
+                    <div class="grid grid-cols-2 gap-8 mb-12">
+                        <div class="bg-gray-800/50 p-8 rounded-lg border border-gray-700">
+                            <div class="text-sm text-gray-400 mb-2 font-mono">TOTAL PLAYERS</div>
+                            <div id="total-players" class="tv-heading">0</div>
+                        </div>
+                        <div class="bg-gray-800/50 p-8 rounded-lg border border-gray-700">
+                            <div class="text-sm text-gray-400 mb-2 font-mono">AVG SCORE</div>
+                            <div id="avg-score" class="tv-heading">0</div>
+                        </div>
+                    </div>
+                    
+                    <h3 class="tv-subheading mb-6">FINAL RANKINGS</h3>
+                    <div id="final-rankings" class="max-w-2xl mx-auto space-y-3">
+                        <!-- Rankings will be loaded here -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Game 2 Rules Screen -->
+            <div id="game2-rules-screen" class="hidden phase-transition">
+                <div class="max-w-4xl mx-auto">
+                    <h2 class="tv-heading mb-8 font-mono text-orange-500">PHASE 2: EVIDENCE COLLECTION</h2>
+                    <div class="grid grid-cols-2 gap-8">
+                        <div class="bg-gray-800/50 p-8 rounded-lg border border-gray-700 text-center">
+                            <div class="text-6xl mb-4">🎯</div>
+                            <h3 class="tv-subheading mb-4">BINGO BOARD</h3>
+                            <p class="tv-body text-gray-400">3×3 Evidence Board</p>
+                        </div>
+                        <div class="bg-gray-800/50 p-8 rounded-lg border border-gray-700 text-center">
+                            <div class="text-6xl mb-4">🏆</div>
+                            <h3 class="tv-subheading mb-4">TOP 10 REWARD</h3>
+                            <p class="tv-body text-gray-400">Level 3 Clues</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Game 2 Bingo Screen -->
+            <div id="game2-bingo-screen" class="hidden phase-transition">
+                <div class="grid grid-cols-3 gap-8">
+                    <div class="col-span-2">
+                        <div id="current-bingo-phrase" class="bingo-phrase-display mb-8">
+                            <div class="text-sm text-gray-400 mb-4 font-mono">CURRENT EVIDENCE</div>
+                            <div id="bingo-phrase-text" class="tv-heading">-</div>
+                        </div>
+                        
+                        <h3 class="tv-subheading mb-6 font-mono">PROGRESS TRACKING</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="bg-gray-800/50 p-6 rounded-lg border border-gray-700">
+                                <div class="text-sm text-gray-400 mb-2 font-mono">即將連一線</div>
+                                <div id="bingo-near-one" class="tv-subheading">0</div>
+                            </div>
+                            <div class="bg-gray-800/50 p-6 rounded-lg border border-gray-700">
+                                <div class="text-sm text-gray-400 mb-2 font-mono">已連一線</div>
+                                <div id="bingo-one-line" class="tv-subheading">0</div>
+                            </div>
+                            <div class="bg-gray-800/50 p-6 rounded-lg border border-gray-700">
+                                <div class="text-sm text-gray-400 mb-2 font-mono">即將連兩線</div>
+                                <div id="bingo-near-two" class="tv-subheading">0</div>
+                            </div>
+                            <div class="bg-gray-800/50 p-6 rounded-lg border border-gray-700">
+                                <div class="text-sm text-gray-400 mb-2 font-mono">已連兩線 ✓</div>
+                                <div id="bingo-two-lines" class="tv-subheading text-green-500">0</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3 class="tv-subheading mb-6 font-mono">TOP 10</h3>
+                        <div id="bingo-top10" class="space-y-3">
+                            <!-- Top 10 will be loaded here -->
+                        </div>
+                        
+                        <h3 class="tv-subheading mb-6 mt-8 font-mono">DRAW HISTORY</h3>
+                        <div id="bingo-history" class="space-y-2 max-h-96 overflow-y-auto">
+                            <!-- History will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Game 2 Settlement Screen -->
+            <div id="game2-settle-screen" class="hidden phase-transition">
+                <div class="max-w-4xl mx-auto text-center">
+                    <h2 class="tv-heading mb-8 font-mono text-orange-500">EVIDENCE COLLECTION COMPLETE</h2>
+                    <div class="grid grid-cols-3 gap-8 mb-12">
+                        <div class="bg-gray-800/50 p-8 rounded-lg border border-gray-700">
+                            <div class="text-sm text-gray-400 mb-2 font-mono">COMPLETED</div>
+                            <div id="bingo-completed-count" class="tv-heading">0</div>
+                        </div>
+                        <div class="bg-gray-800/50 p-8 rounded-lg border border-gray-700">
+                            <div class="text-sm text-gray-400 mb-2 font-mono">1-LINE</div>
+                            <div id="bingo-one-line-count" class="tv-heading">0</div>
+                        </div>
+                        <div class="bg-gray-800/50 p-8 rounded-lg border border-gray-700">
+                            <div class="text-sm text-gray-400 mb-2 font-mono">0-LINE</div>
+                            <div id="bingo-zero-line-count" class="tv-heading">0</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Game 3 Rules Screen -->
+            <div id="game3-rules-screen" class="hidden phase-transition">
+                <div class="max-w-4xl mx-auto text-center">
+                    <h2 class="tv-heading mb-8 font-mono text-orange-500">PHASE 3: TEAM BATTLE</h2>
+                    <div class="text-8xl mb-8">⚔️</div>
+                    <p class="tv-body mb-8">SWITCH BATTLE - TEAM BOY vs TEAM GIRL</p>
+                    <div class="grid grid-cols-2 gap-8">
+                        <div class="bg-blue-900/30 p-8 rounded-lg border border-blue-700">
+                            <div class="text-6xl mb-4">👦</div>
+                            <h3 class="tv-subheading">TEAM BOY</h3>
+                        </div>
+                        <div class="bg-pink-900/30 p-8 rounded-lg border border-pink-700">
+                            <div class="text-6xl mb-4">👧</div>
+                            <h3 class="tv-subheading">TEAM GIRL</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Game 3 Team Selection Screen -->
+            <div id="game3-team-screen" class="hidden phase-transition">
+                <div class="max-w-4xl mx-auto text-center">
+                    <h2 class="tv-heading mb-8 font-mono text-orange-500">CHOOSE YOUR TEAM</h2>
+                    <div class="grid grid-cols-2 gap-12">
+                        <div class="bg-blue-900/30 p-12 rounded-lg border border-blue-700">
+                            <div class="text-8xl mb-6">👦</div>
+                            <h3 class="tv-heading">TEAM BOY</h3>
+                            <div id="team-boy-count" class="tv-subheading mt-4">0</div>
+                        </div>
+                        <div class="bg-pink-900/30 p-12 rounded-lg border border-pink-700">
+                            <div class="text-8xl mb-6">👧</div>
+                            <h3 class="tv-heading">TEAM GIRL</h3>
+                            <div id="team-girl-count" class="tv-subheading mt-4">0</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Final Choice Screen -->
+            <div id="final-choice-screen" class="hidden phase-transition">
+                <div class="max-w-4xl mx-auto text-center">
+                    <h2 class="tv-heading mb-8 font-mono text-orange-500">FINAL PREDICTION</h2>
+                    <p class="tv-body mb-12">REVIEW YOUR EVIDENCE AND MAKE YOUR FINAL CHOICE</p>
+                    
+                    <div class="grid grid-cols-2 gap-8 mb-12">
+                        <div class="bg-blue-900/30 p-8 rounded-lg border border-blue-700">
+                            <div class="text-6xl mb-4">👦</div>
+                            <h3 class="tv-subheading">BOY PREDICTIONS</h3>
+                            <div id="boy-predictions" class="tv-heading mt-4">0</div>
+                        </div>
+                        <div class="bg-pink-900/30 p-8 rounded-lg border border-pink-700">
+                            <div class="text-6xl mb-4">👧</div>
+                            <h3 class="tv-subheading">GIRL PREDICTIONS</h3>
+                            <div id="girl-predictions" class="tv-heading mt-4">0</div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-800/50 p-8 rounded-lg border border-gray-700">
+                        <div class="text-sm text-gray-400 mb-4 font-mono">PREDICTION PROGRESS</div>
+                        <div class="progress-bar">
+                            <div id="prediction-progress" class="progress-fill" style="width: 0%"></div>
+                        </div>
+                        <div id="prediction-count" class="tv-subheading mt-4">0 / 0</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Grand Reveal Screen -->
+            <div id="grand-reveal-screen" class="hidden phase-transition">
+                <div class="text-center">
+                    <div id="reveal-countdown" class="countdown-timer text-orange-500 mb-8">5</div>
+                    <div id="reveal-result" class="hidden">
+                        <div class="tv-heading mb-8">IT'S A</div>
+                        <div id="reveal-gender" class="reveal-text"></div>
+                        <div id="reveal-stats" class="mt-12">
+                            <div class="bg-gray-800/50 p-8 rounded-lg border border-gray-700 max-w-2xl mx-auto">
+                                <div class="text-sm text-gray-400 mb-4 font-mono">PREDICTION ACCURACY</div>
+                                <div id="correct-percentage" class="tv-heading text-green-500">0%</div>
+                                <div id="correct-count" class="tv-subheading mt-4">0 / 0</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Confetti Canvas -->
+        <canvas id="confetti-canvas" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999;"></canvas>
+    </div>
+    
+    <script>
+        // Global database variable
+        let database;
+        
+        // Firebase initialization with error handling
+        try {
+            if (!firebase.apps.length) {
+                firebase.initializeApp(window.CONFIG.firebaseConfig);
+            }
+            database = firebase.database();
+            console.log('Firebase initialized successfully');
+        } catch (error) {
+            console.error('Firebase initialization error:', error);
+            alert('Firebase initialization failed. Please check your internet connection.');
+        }
+        
+        // State
+        let currentPhase = 'ONBOARDING';
+        let gameState = {};
+        let players = {};
+        let questions = {};
+        let groupQuizQuestions = [];
+        let commonQuizQuestions = [];
+        let isMuted = false;
+        
+        // DOM Elements
+        const loadingEl = document.getElementById('loading');
+        const mainContentEl = document.getElementById('main-content');
+        const muteBtn = document.getElementById('mute-btn');
+        const muteIcon = document.getElementById('mute-icon');
+        const confettiCanvas = document.getElementById('confetti-canvas');
+        
+        // Initialize
+        function init() {
+            // Setup Firebase listeners
+            setupGameStateListener();
+            setupPlayersListener();
+            setupQuestionsListener();
+            
+            // Setup QR code
+            setupQRCode();
+            
+            // Setup event listeners
+            setupEventListeners();
+            
+            // Hide loading, show main content
+            loadingEl.classList.add('hidden');
+            mainContentEl.classList.remove('hidden');
+            muteBtn.classList.remove('hidden');
+        }
+        
+        function setupQRCode() {
+            const playerUrl = window.GenderRevealUtils.getPlayerUrl();
+            document.getElementById('join-url').textContent = playerUrl;
+            
+            const qrContainer = document.getElementById('qr-code');
+            if (typeof QRCode !== 'undefined') {
+                new QRCode(qrContainer, {
+                    text: playerUrl,
+                    width: 200,
+                    height: 200,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+            }
+        }
+        
+        function setupGameStateListener() {
+            database.ref(window.CONFIG.dbPaths.gameState).on('value', (snapshot) => {
+                gameState = snapshot.val() || {
+                    current_phase: 'ONBOARDING',
+                    current_question_index: 0,
+                    current_bingo_phrase: '',
+                    drawn_bingo_phrases: []
+                };
+                currentPhase = gameState.current_phase || 'ONBOARDING';
+                updateDisplay();
+            });
+        }
+        
+        function setupPlayersListener() {
+            database.ref(window.CONFIG.dbPaths.players).on('value', (snapshot) => {
+                players = snapshot.val() || {};
+                updatePlayerCount();
+                updateGameDisplays();
+            });
+        }
+        
+        function setupQuestionsListener() {
+            database.ref('questions').on('value', (snapshot) => {
+                questions = snapshot.val() || { group_quiz: {}, common_quiz: {} };
+                loadQuestions();
+            });
+        }
+        
+        function loadQuestions() {
+            // Load common quiz questions
+            const commonQuestions = questions.common_quiz || {};
+            commonQuizQuestions = Object.keys(commonQuestions).map(key => ({
+                id: key,
+                ...commonQuestions[key]
+            }));
+        }
+        
+        function setupEventListeners() {
+            muteBtn.addEventListener('click', toggleMute);
+        }
+        
+        function toggleMute() {
+            isMuted = !isMuted;
+            muteIcon.textContent = isMuted ? '🔇' : '🔊';
+            
+            // Mute/unmute all audio
+            if (typeof Howl !== 'undefined') {
+                Howler.mute(isMuted);
+            }
+        }
+        
+        function updateDisplay() {
+            // Hide all screens
+            document.querySelectorAll('#main-content > div > div').forEach(screen => {
+                screen.classList.add('hidden');
+            });
+            
+            // Show appropriate screen based on current phase
+            switch(currentPhase) {
+                case 'ONBOARDING':
+                    document.getElementById('onboarding-screen').classList.remove('hidden');
+                    break;
+                case 'BACKGROUND_STORY':
+                    document.getElementById('background-story-screen').classList.remove('hidden');
+                    break;
+                case 'GAME1_RULES':
+                    document.getElementById('game1-rules-screen').classList.remove('hidden');
+                    break;
+                case 'GAME1_QUIZ':
+                    document.getElementById('game1-quiz-screen').classList.remove('hidden');
+                    updateGame1Quiz();
+                    break;
+                case 'GAME1_SETTLE':
+                    document.getElementById('game1-settle-screen').classList.remove('hidden');
+                    updateGame1Settlement();
+                    break;
+                case 'GAME2_RULES':
+                    document.getElementById('game2-rules-screen').classList.remove('hidden');
+                    break;
+                case 'GAME2_BINGO':
+                    document.getElementById('game2-bingo-screen').classList.remove('hidden');
+                    updateGame2Bingo();
+                    break;
+                case 'GAME2_SETTLE':
+                    document.getElementById('game2-settle-screen').classList.remove('hidden');
+                    updateGame2Settlement();
+                    break;
+                case 'GAME3_RULES':
+                    document.getElementById('game3-rules-screen').classList.remove('hidden');
+                    break;
+                case 'GAME3_TEAM_SELECT':
+                    document.getElementById('game3-team-screen').classList.remove('hidden');
+                    updateGame3Team();
+                    break;
+                case 'FINAL_CHOICE':
+                    document.getElementById('final-choice-screen').classList.remove('hidden');
+                    updateFinalChoice();
+                    break;
+                case 'GRAND_REVEAL':
+                    document.getElementById('grand-reveal-screen').classList.remove('hidden');
+                    startGrandReveal();
+                    break;
+            }
+        }
+        
+        function updatePlayerCount() {
+            const count = Object.keys(players).length;
+            document.getElementById('player-count').textContent = count;
+        }
+        
+        function updateGameDisplays() {
+            switch(currentPhase) {
+                case 'GAME1_QUIZ':
+                    updateGame1Quiz();
+                    break;
+                case 'GAME1_SETTLE':
+                    updateGame1Settlement();
+                    break;
+                case 'GAME2_BINGO':
+                    updateGame2Bingo();
+                    break;
+                case 'GAME2_SETTLE':
+                    updateGame2Settlement();
+                    break;
+                case 'GAME3_TEAM_SELECT':
+                    updateGame3Team();
+                    break;
+                case 'FINAL_CHOICE':
+                    updateFinalChoice();
+                    break;
+            }
+        }
+        
+        function updateGame1Quiz() {
+            const stage = gameState.game1_stage || 'GROUP';
+            const groupQuizDisplay = document.getElementById('group-quiz-display');
+            const commonQuizDisplay = document.getElementById('common-quiz-display');
+            
+            if (stage === 'GROUP') {
+                groupQuizDisplay.classList.remove('hidden');
+                commonQuizDisplay.classList.add('hidden');
+                updateGroupQuizLeaderboard();
+            } else {
+                groupQuizDisplay.classList.add('hidden');
+                commonQuizDisplay.classList.remove('hidden');
+                updateCommonQuizDisplay();
+            }
+        }
+        
+        function updateGroupQuizLeaderboard() {
+            const leaderboard = document.getElementById('group-quiz-leaderboard');
+            leaderboard.innerHTML = '';
+            
+            const playerArray = Object.values(players).sort((a, b) => (b.score || 0) - (a.score || 0));
+            const top10 = playerArray.slice(0, 10);
+            
+            top10.forEach((player, index) => {
+                const div = document.createElement('div');
+                div.className = `leaderboard-item rank-${index + 1} p-4`;
+                div.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <span class="tv-body">${index + 1}. ${window.GenderRevealUtils.escapeHtml(player.name)}</span>
+                        <span class="tv-body font-mono">${player.score || 0}</span>
+                    </div>
+                `;
+                leaderboard.appendChild(div);
+            });
+        }
+        
+        function updateCommonQuizDisplay() {
+            const questionIndex = gameState.current_question_index || 0;
+            const revealStage = gameState.common_reveal_stage || 0;
+            
+            document.getElementById('quiz-stage-indicator').textContent = `QUESTION ${questionIndex + 1}/5`;
+            
+            const quizQuestion = document.getElementById('quiz-question');
+            const quizOptions = document.getElementById('quiz-options');
+            const quizCountdown = document.getElementById('quiz-countdown');
+            const quizAnswerReveal = document.getElementById('quiz-answer-reveal');
+            const correctAnswer = document.getElementById('correct-answer');
+            
+            if (questionIndex < commonQuizQuestions.length) {
+                const question = commonQuizQuestions[questionIndex];
+                
+                // Reset display
+                quizAnswerReveal.classList.add('hidden');
+                quizCountdown.classList.add('hidden');
+                
+                if (revealStage === 0) {
+                    // Show question only
+                    quizQuestion.textContent = question.q;
+                    quizOptions.innerHTML = '';
+                } else if (revealStage <= 4) {
+                    // Show options one by one
+                    quizQuestion.textContent = question.q;
+                    quizOptions.innerHTML = '';
+                    
+                    const labels = ['A', 'B', 'C', 'D'];
+                    for (let i = 0; i < revealStage; i++) {
+                        const option = document.createElement('div');
+                        option.className = 'quiz-option';
+                        option.textContent = `${labels[i]}. ${window.GenderRevealUtils.escapeHtml(question.options[i])}`;
+                        quizOptions.appendChild(option);
+                    }
+                } else if (revealStage === 5) {
+                    // Show countdown
+                    quizQuestion.textContent = question.q;
+                    quizOptions.innerHTML = '';
+                    
+                    const labels = ['A', 'B', 'C', 'D'];
+                    question.options.forEach((option, index) => {
+                        const optionDiv = document.createElement('div');
+                        optionDiv.className = 'quiz-option';
+                        optionDiv.textContent = `${labels[index]}. ${window.GenderRevealUtils.escapeHtml(option)}`;
+                        quizOptions.appendChild(optionDiv);
+                    });
+                    
+                    quizCountdown.classList.remove('hidden');
+                    startQuizCountdown();
+                } else {
+                    // Show answer
+                    quizQuestion.textContent = question.q;
+                    quizOptions.innerHTML = '';
+                    
+                    const labels = ['A', 'B', 'C', 'D'];
+                    question.options.forEach((option, index) => {
+                        const optionDiv = document.createElement('div');
+                        const isCorrect = index === question.answer;
+                        optionDiv.className = `quiz-option ${isCorrect ? 'correct' : 'wrong'}`;
+                        optionDiv.textContent = `${labels[index]}. ${window.GenderRevealUtils.escapeHtml(option)}`;
+                        quizOptions.appendChild(optionDiv);
+                    });
+                    
+                    quizCountdown.classList.add('hidden');
+                    quizAnswerReveal.classList.remove('hidden');
+                    correctAnswer.textContent = labels[question.answer];
+                }
+            }
+        }
+        
+        function startQuizCountdown() {
+            let timeLeft = 15;
+            const quizCountdown = document.getElementById('quiz-countdown');
+            quizCountdown.textContent = timeLeft;
+            
+            const timer = setInterval(() => {
+                timeLeft--;
+                quizCountdown.textContent = timeLeft;
+                
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                }
+            }, 1000);
+        }
+        
+        function updateGame1Settlement() {
+            const playerArray = Object.values(players);
+            const totalPlayers = playerArray.length;
+            const totalScore = playerArray.reduce((sum, p) => sum + (p.score || 0), 0);
+            const avgScore = totalPlayers > 0 ? Math.round(totalScore / totalPlayers) : 0;
+            
+            document.getElementById('total-players').textContent = totalPlayers;
+            document.getElementById('avg-score').textContent = avgScore;
+            
+            // Show final rankings
+            const rankings = document.getElementById('final-rankings');
+            rankings.innerHTML = '';
+            
+            const sortedPlayers = playerArray.sort((a, b) => (b.score || 0) - (a.score || 0));
+            
+            sortedPlayers.forEach((player, index) => {
+                const div = document.createElement('div');
+                div.className = `leaderboard-item rank-${Math.min(index + 1, 3)} p-4`;
+                div.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <span class="tv-body">${index + 1}. ${window.GenderRevealUtils.escapeHtml(player.name)}</span>
+                        <span class="tv-body font-mono">${player.score || 0}</span>
+                    </div>
+                `;
+                rankings.appendChild(div);
+            });
+        }
+        
+        function updateGame2Bingo() {
+            // Update current phrase
+            document.getElementById('bingo-phrase-text').textContent = gameState.current_bingo_phrase || '-';
+            
+            // Calculate bingo statistics
+            let nearOne = 0, oneLine = 0, nearTwo = 0, twoLines = 0;
+            
+            Object.values(players).forEach(player => {
+                const markedCells = player.marked_cells || [];
+                const lines = window.GenderRevealUtils.calculateBingoLines(markedCells);
+                
+                if (lines === 0) {
+                    // Check if near one line
+                    if (isNearLine(markedCells, 1)) nearOne++;
+                } else if (lines === 1) {
+                    oneLine++;
+                    // Check if near two lines
+                    if (isNearLine(markedCells, 2)) nearTwo++;
+                } else if (lines >= 2) {
+                    twoLines++;
+                }
+            });
+            
+            document.getElementById('bingo-near-one').textContent = nearOne;
+            document.getElementById('bingo-one-line').textContent = oneLine;
+            document.getElementById('bingo-near-two').textContent = nearTwo;
+            document.getElementById('bingo-two-lines').textContent = twoLines;
+            
+            // Update top 10
+            updateBingoTop10();
+            
+            // Update history
+            updateBingoHistory();
+        }
+        
+        function isNearLine(markedCells, targetLines) {
+            return window.GenderRevealUtils.isNearLine(markedCells, targetLines);
+        }
+        
+        function updateBingoTop10() {
+            const top10 = document.getElementById('bingo-top10');
+            top10.innerHTML = '';
+            
+            const completedPlayers = Object.values(players)
+                .filter(p => (p.bingo_lines || 0) >= 2)
+                .sort((a, b) => (a.bingo_completed_at || 0) - (b.bingo_completed_at || 0))
+                .slice(0, 10);
+            
+            completedPlayers.forEach((player, index) => {
+                const div = document.createElement('div');
+                div.className = 'leaderboard-item rank-1 p-3';
+                div.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm">${index + 1}. ${window.GenderRevealUtils.escapeHtml(player.name)}</span>
+                        <span class="text-xs font-mono">${window.GenderRevealUtils.formatTimestamp(player.bingo_completed_at)}</span>
+                    </div>
+                `;
+                top10.appendChild(div);
+            });
+            
+            if (completedPlayers.length === 0) {
+                top10.innerHTML = '<div class="text-sm text-gray-400">No completions yet</div>';
+            }
+        }
+        
+        function updateBingoHistory() {
+            const history = document.getElementById('bingo-history');
+            history.innerHTML = '';
+            
+            const drawnPhrases = gameState.drawn_bingo_phrases || {};
+            const phraseArray = Object.values(drawnPhrases).sort((a, b) => (a.drawn_at || 0) - (b.drawn_at || 0));
+            
+            phraseArray.forEach((entry, index) => {
+                const div = document.createElement('div');
+                div.className = 'p-2 bg-gray-800/50 rounded text-sm';
+                div.innerHTML = `
+                    <span class="font-mono text-gray-400 mr-2">#${index + 1}</span>
+                    <span>${window.GenderRevealUtils.escapeHtml(entry.phrase)}</span>
+                `;
+                history.appendChild(div);
+            });
+        }
+        
+        function updateGame2Settlement() {
+            let completed = 0, oneLine = 0, zeroLine = 0;
+            
+            Object.values(players).forEach(player => {
+                const lines = player.bingo_lines || 0;
+                if (lines >= 2) completed++;
+                else if (lines === 1) oneLine++;
+                else zeroLine++;
+            });
+            
+            document.getElementById('bingo-completed-count').textContent = completed;
+            document.getElementById('bingo-one-line-count').textContent = oneLine;
+            document.getElementById('bingo-zero-line-count').textContent = zeroLine;
+        }
+        
+        function updateGame3Team() {
+            let boyCount = 0, girlCount = 0;
+            
+            Object.values(players).forEach(player => {
+                if (player.team === 'BOY') boyCount++;
+                else if (player.team === 'GIRL') girlCount++;
+            });
+            
+            document.getElementById('team-boy-count').textContent = boyCount;
+            document.getElementById('team-girl-count').textContent = girlCount;
+        }
+        
+        function updateFinalChoice() {
+            let boyPredictions = 0, girlPredictions = 0;
+            const totalPlayers = Object.keys(players).length;
+            
+            Object.values(players).forEach(player => {
+                if (player.final_prediction === 'BOY') boyPredictions++;
+                else if (player.final_prediction === 'GIRL') girlPredictions++;
+            });
+            
+            document.getElementById('boy-predictions').textContent = boyPredictions;
+            document.getElementById('girl-predictions').textContent = girlPredictions;
+            
+            const totalPredictions = boyPredictions + girlPredictions;
+            const progress = totalPlayers > 0 ? (totalPredictions / totalPlayers) * 100 : 0;
+            
+            document.getElementById('prediction-progress').style.width = `${progress}%`;
+            document.getElementById('prediction-count').textContent = `${totalPredictions} / ${totalPlayers}`;
+        }
+        
+        function startGrandReveal() {
+            const revealCountdown = document.getElementById('reveal-countdown');
+            const revealResult = document.getElementById('reveal-result');
+            const revealGender = document.getElementById('reveal-gender');
+            
+            // Reset display
+            revealCountdown.classList.remove('hidden');
+            revealResult.classList.add('hidden');
+            
+            let count = 5;
+            revealCountdown.textContent = count;
+            
+            const countdown = setInterval(() => {
+                count--;
+                if (count > 0) {
+                    revealCountdown.textContent = count;
+                } else {
+                    clearInterval(countdown);
+                    revealCountdown.classList.add('hidden');
+                    showRevealResult();
+                }
+            }, 1000);
+        }
+        
+        function showRevealResult() {
+            database.ref(window.CONFIG.dbPaths.secretGender).once('value', (snapshot) => {
+                const secretGender = snapshot.val();
+                
+                const revealResult = document.getElementById('reveal-result');
+                const revealGender = document.getElementById('reveal-gender');
+                
+                revealResult.classList.remove('hidden');
+                revealGender.textContent = secretGender === 'BOY' ? '👦 BOY!' : '👧 GIRL!';
+                revealGender.className = `reveal-text ${secretGender === 'BOY' ? 'text-blue-500' : 'text-pink-500'}`;
+                
+                // Calculate statistics
+                let correctCount = 0;
+                let totalPredictions = 0;
+                
+                Object.values(players).forEach(player => {
+                    if (player.final_prediction) {
+                        totalPredictions++;
+                        if (player.final_prediction === secretGender) {
+                            correctCount++;
+                        }
+                    }
+                });
+                
+                const percentage = totalPredictions > 0 ? Math.round((correctCount / totalPredictions) * 100) : 0;
+                
+                document.getElementById('correct-percentage').textContent = `${percentage}%`;
+                document.getElementById('correct-count').textContent = `${correctCount} / ${totalPredictions}`;
+                
+                // Trigger confetti
+                if (typeof confetti === 'function') {
+                    const colors = secretGender === 'BOY' 
+                        ? ['#3b82f6', '#60a5fa', '#93c5fd', '#ffffff']
+                        : ['#ec4899', '#f472b6', '#f9a8d4', '#ffffff'];
+                    
+                    confetti({
+                        particleCount: 200,
+                        spread: 100,
+                        origin: { y: 0.6 },
+                        colors: colors
+                    });
+                    
+                    // Continuous confetti
+                    const duration = 5 * 1000;
+                    const end = Date.now() + duration;
+                    
+                    (function frame() {
+                        confetti({
+                            particleCount: 5,
+                            angle: 60,
+                            spread: 55,
+                            origin: { x: 0 },
+                            colors: colors
+                        });
+                        confetti({
+                            particleCount: 5,
+                            angle: 120,
+                            spread: 55,
+                            origin: { x: 1 },
+                            colors: colors
+                        });
+                        
+                        if (Date.now() < end) {
+                            requestAnimationFrame(frame);
+                        }
+                    }());
+                }
+            });
+        }
+        
+        // Start initialization when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+    </script>
+</body>
+</html>
