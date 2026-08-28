@@ -113,11 +113,11 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%) rotate(-15deg);
-            font-size: 20px;
+            font-size: 9px;
             font-weight: 700;
-            color: rgba(220, 38, 38, 0.55);
-            border: 2px solid rgba(220, 38, 38, 0.55);
-            padding: 6px 16px;
+            color: rgba(220, 38, 38, 0.6);
+            border: 1px solid rgba(220, 38, 38, 0.6);
+            padding: 2px 4px;
             pointer-events: none;
             white-space: nowrap;
         }
@@ -132,6 +132,52 @@
             object-fit: contain;
             cursor: zoom-in;
             image-rendering: -webkit-optimize-contrast;
+        }
+        
+        /* Square thumbnail used inside the 3x3 evidence grid */
+        .clue-thumb {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            cursor: zoom-in;
+        }
+        
+        /* Fullscreen lightbox to zoom evidence images in-page instead of opening a new tab */
+        #image-lightbox {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            cursor: zoom-out;
+            padding: 24px;
+        }
+        
+        #image-lightbox.hidden {
+            display: none;
+        }
+        
+        #image-lightbox img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            border-radius: 8px;
+        }
+        
+        #image-lightbox-close {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: #334155;
+            color: #f8f8f8;
+            border: none;
+            border-radius: 4px;
+            width: 36px;
+            height: 36px;
+            font-size: 16px;
+            cursor: pointer;
         }
         
         /* Bingo cell */
@@ -488,21 +534,21 @@
                     <div class="space-y-4">
                         <div class="case-file p-4 rounded-lg">
                             <h3 class="font-bold mb-3 text-orange-500">LEVEL 1 EVIDENCE</h3>
-                            <div id="level1-clues" class="space-y-2">
+                            <div id="level1-clues" class="grid grid-cols-3 gap-2">
                                 <!-- Clues will be loaded here -->
                             </div>
                         </div>
                         
                         <div class="case-file p-4 rounded-lg">
                             <h3 class="font-bold mb-3 text-amber-500">LEVEL 2 EVIDENCE</h3>
-                            <div id="level2-clues" class="space-y-2">
+                            <div id="level2-clues" class="grid grid-cols-3 gap-2">
                                 <!-- Clues will be loaded here -->
                             </div>
                         </div>
                         
                         <div class="case-file p-4 rounded-lg">
                             <h3 class="font-bold mb-3 text-red-500">LEVEL 3 EVIDENCE</h3>
-                            <div id="level3-clues" class="space-y-2">
+                            <div id="level3-clues" class="grid grid-cols-3 gap-2">
                                 <!-- Clues will be loaded here -->
                             </div>
                         </div>
@@ -603,6 +649,12 @@
                 </div>
             </div>
         </div>
+    </div>
+    
+    <!-- Image lightbox for viewing evidence photos without leaving the page -->
+    <div id="image-lightbox" class="hidden" onclick="closeImageLightbox()">
+        <img id="image-lightbox-img" src="" alt="Clue">
+        <button id="image-lightbox-close" onclick="closeImageLightbox(); event.stopPropagation();">✕</button>
     </div>
     
     <script>
@@ -1574,23 +1626,32 @@
                     const isUnlocked = unlockedClues.includes(clueId);
                     
                     const div = document.createElement('div');
-                    div.className = `p-3 rounded ${isUnlocked ? 'bg-gray-700 text-gray-100' : 'bg-gray-800 text-gray-400 classified'}`;
+                    div.className = `aspect-square rounded overflow-hidden flex items-center justify-center text-center p-2 ${isUnlocked ? 'bg-gray-700 text-gray-100' : 'bg-gray-800 text-gray-400 classified'}`;
                     
                     if (isUnlocked) {
                         const isImage = clue.startsWith('http');
                         if (isImage) {
-                            div.innerHTML = `<img src="${clue}" alt="Clue" class="clue-image rounded" onclick="window.open('${clue}', '_blank')">`;
+                            div.innerHTML = `<img src="${clue}" alt="Clue" class="clue-thumb" onclick="openImageLightbox('${clue}')">`;
                         } else {
-                            div.textContent = clue;
+                            div.innerHTML = `<span class="text-xs leading-snug break-words">${clue}</span>`;
                         }
                     } else {
-                        div.textContent = 'LOCKED';
-                        div.classList.add('font-mono', 'text-center', 'tracking-widest');
+                        div.innerHTML = `<span class="font-mono text-xs tracking-widest">LOCKED</span>`;
                     }
                     
                     container.appendChild(div);
                 });
             });
+        }
+        
+        function openImageLightbox(src) {
+            document.getElementById('image-lightbox-img').src = src;
+            document.getElementById('image-lightbox').classList.remove('hidden');
+        }
+        
+        function closeImageLightbox() {
+            document.getElementById('image-lightbox').classList.add('hidden');
+            document.getElementById('image-lightbox-img').src = '';
         }
         
         function startRevealCountdown() {
