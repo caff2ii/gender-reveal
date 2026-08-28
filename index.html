@@ -300,6 +300,20 @@
             
             <!-- Game Screens (hidden by default) -->
             <div id="game-screens" class="hidden">
+                <!-- Waiting for Host (shown after registration while phase is still ONBOARDING) -->
+                <div id="waiting-screen" class="hidden phase-transition">
+                    <div class="evidence-board p-6 rounded-lg text-center">
+                        <h2 class="text-xl font-bold mb-4 font-mono text-orange-500">REGISTRATION COMPLETE</h2>
+                        <p class="text-lg mb-4">Welcome, Agent <span id="waiting-player-name" class="font-bold"></span>!</p>
+                        <div class="bg-gray-800 p-4 rounded-lg mb-4">
+                            <p class="text-sm text-gray-400 mb-1 font-mono">YOUR AGENT PIN</p>
+                            <p id="waiting-player-pin" class="text-3xl font-mono font-bold text-orange-500 tracking-widest">0000</p>
+                            <p class="text-xs text-gray-500 mt-2">Save this PIN to access your case file on other devices</p>
+                        </div>
+                        <p class="text-gray-400">⏳ Waiting for the investigation to begin...</p>
+                    </div>
+                </div>
+                
                 <!-- Background Story -->
                 <div id="background-story-screen" class="hidden phase-transition">
                     <div class="evidence-board p-6 rounded-lg">
@@ -684,6 +698,11 @@
             updateGameScreen();
         }
         
+        function showWaitingScreen() {
+            document.getElementById('waiting-player-name').textContent = currentPlayer.name || '';
+            document.getElementById('waiting-player-pin').textContent = window.GenderRevealUtils.formatPin(currentPlayer.pin || 0);
+        }
+        
         function setupGameStateListener() {
             database.ref(window.CONFIG.dbPaths.gameState).on('value', (snapshot) => {
                 gameState = snapshot.val() || {
@@ -758,7 +777,13 @@
             // Show appropriate screen based on current phase
             switch(currentPhase) {
                 case 'ONBOARDING':
-                    showOnboarding();
+                    if (currentPlayer) {
+                        // Player already registered - show waiting screen instead of the registration form
+                        document.getElementById('waiting-screen').classList.remove('hidden');
+                        showWaitingScreen();
+                    } else {
+                        showOnboarding();
+                    }
                     break;
                 case 'BACKGROUND_STORY':
                     document.getElementById('background-story-screen').classList.remove('hidden');
@@ -810,7 +835,7 @@
             // Login
             loginBtn.addEventListener('click', loginPlayer);
             loginPin.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') loginPlayer.click();
+                if (e.key === 'Enter') loginBtn.click();
             });
             
             // Quiz options will be dynamically added
@@ -846,6 +871,11 @@
                 return;
             }
             
+            // Prevent duplicate submissions - each extra click would create another player
+            if (registerBtn.disabled) return;
+            registerBtn.disabled = true;
+            registerBtn.textContent = 'JOINING...';
+            
             // Generate unique PIN
             generateUniquePIN().then(pin => {
                 const playerData = {
@@ -866,11 +896,22 @@
                 const newPlayerRef = database.ref(window.CONFIG.dbPaths.players).push();
                 playerData.id = newPlayerRef.key;
                 
-                newPlayerRef.set(playerData).then(() => {
+                return newPlayerRef.set(playerData).then(() => {
                     currentPlayer = playerData;
-                    localStorage.setItem(window.CONFIG.player.localStorageKey, JSON.stringify(currentPlayer));
+                    try {
+                        localStorage.setItem(window.CONFIG.player.localStorageKey, JSON.stringify(currentPlayer));
+                    } catch (e) {
+                        // Storage may be unavailable (privacy mode) - registration still succeeded
+                        console.warn('Could not save player session locally:', e);
+                    }
                     showGameScreens();
                 });
+            }).catch((error) => {
+                console.error('Registration failed:', error);
+                alert('Registration failed: ' + (error && error.message ? error.message : 'Please check your connection and try again.'));
+            }).finally(() => {
+                registerBtn.disabled = false;
+                registerBtn.textContent = 'JOIN INVESTIGATION';
             });
         }
         
@@ -885,6 +926,10 @@
                         } else {
                             resolve(pin);
                         }
+                    }, (error) => {
+                        // Query failed (e.g. permission denied) - resolve best-effort so registration can still proceed
+                        console.warn('PIN uniqueness check failed:', error);
+                        resolve(pin);
                     });
                 };
                 
