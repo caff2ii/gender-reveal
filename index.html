@@ -169,6 +169,29 @@
         .hidden {
             display: none !important;
         }
+        /* Case briefing (background story) styling */
+        .story-heading {
+            color: #fbbf24; /* amber-400 */
+            letter-spacing: 0.08em;
+            text-shadow: 0 0 24px rgba(251, 191, 36, 0.35);
+        }
+        
+        .story-body {
+            color: #e7e5e4; /* warm stone-200 */
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+        }
+        
+        .story-card {
+            background: linear-gradient(160deg, rgba(41, 37, 36, 0.55) 0%, rgba(28, 25, 23, 0.65) 100%);
+            border: 1px solid #57534e;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+        }
+        
+        .story-highlight {
+            color: #fb923c; /* orange-400 */
+            text-shadow: 0 0 18px rgba(251, 146, 60, 0.35);
+        }
+        
         
         /* Button styling */
         .btn-primary {
@@ -317,14 +340,14 @@
                 <!-- Background Story -->
                 <div id="background-story-screen" class="hidden phase-transition">
                     <div class="evidence-board p-6 rounded-lg">
-                        <h2 class="text-xl font-bold mb-4 font-mono text-orange-500">CASE BRIEFING</h2>
-                        <p class="text-lg leading-relaxed mb-4">
+                        <h2 class="text-xl font-bold mb-4 font-mono story-heading">CASE BRIEFING</h2>
+                        <p class="text-lg story-body leading-relaxed mb-4">
                             大家而家會化身成為一個偵探，參加呢個派對既目標就係去揭破一個驚天大秘密：『BB 既性別』。
                         </p>
-                        <p class="text-lg leading-relaxed mb-4">
+                        <p class="text-lg story-body leading-relaxed mb-4">
                             係呢個過程入面，你將會受到不同既考驗，鬥智鬥力，最後到達決戰之地，帶住你認為係岩既答案，與共同答案既同伴連成一線，對抗另一隊自認為岩既隊伍。
                         </p>
-                        <p class="text-xl font-bold text-orange-500">
+                        <p class="text-xl font-bold story-highlight">
                             到底係男仔，定係女仔呢？一切一切就等你黎揭曉啦！！！！
                         </p>
                     </div>

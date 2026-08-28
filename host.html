@@ -609,26 +609,12 @@
                 return;
             }
             
-            // COMMON stage - guide the host through the 3-step flow:
-            // step 0: question shown -> START COUNTDOWN available
-            // step 1: countdown running (players answering) -> REVEAL ANSWER available
-            // step 2: answer revealed -> NEXT QUIZ STEP available
-            if (revealStage === 0) {
-                nextQuizStepBtn.textContent = isLastQuestion ? 'GO TO SETTLEMENT' : 'NEXT QUIZ STEP';
-                nextQuizStepBtn.disabled = true;
-                startCountdownBtn.disabled = false;
-                revealAnswerBtn.disabled = true;
-            } else if (revealStage === 1) {
-                nextQuizStepBtn.textContent = isLastQuestion ? 'GO TO SETTLEMENT' : 'NEXT QUIZ STEP';
-                nextQuizStepBtn.disabled = true;
-                startCountdownBtn.disabled = true;
-                revealAnswerBtn.disabled = false;
-            } else {
-                nextQuizStepBtn.textContent = isLastQuestion ? 'GO TO SETTLEMENT' : 'NEXT QUIZ STEP';
-                nextQuizStepBtn.disabled = false;
-                startCountdownBtn.disabled = true;
-                revealAnswerBtn.disabled = true;
-            }
+            // COMMON stage - all three controls are always enabled (live host controls).
+            // The handlers are stage-aware, so pressing them at any moment is safe.
+            nextQuizStepBtn.textContent = isLastQuestion ? 'GO TO SETTLEMENT' : 'NEXT QUIZ STEP';
+            nextQuizStepBtn.disabled = false;
+            startCountdownBtn.disabled = false;
+            revealAnswerBtn.disabled = false;
         }
         
         function updateGame2UI() {
@@ -807,9 +793,10 @@
         }
         
         function revealQuizAnswer() {
-            // Step 1 -> 2: reveal the correct answer to everyone
+            // Reveal the correct answer. Works from stage 0 (question shown, no countdown)
+            // or stage 1 (countdown running). Stage 2 is already revealed - no-op.
             const currentRevealStage = gameState.common_reveal_stage || 0;
-            if (currentRevealStage !== 1) return;
+            if (currentRevealStage >= 2) return;
             
             database.ref(window.CONFIG.dbPaths.gameState).update({
                 common_reveal_stage: 2
