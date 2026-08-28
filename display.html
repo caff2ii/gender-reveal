@@ -978,6 +978,10 @@
             document.querySelectorAll('#main-content > div[id$="-screen"]').forEach(screen => {
                 screen.classList.add('hidden');
             });
+
+            if (currentPhase !== 'GAME1_QUIZ') {
+                lastCommonQuizView = '';
+            }
             
             // Show appropriate screen based on current phase
             switch(currentPhase) {
@@ -1186,6 +1190,7 @@
         
         let quizCountdownTimer = null;
         let quizCountdownStartTimeout = null;
+        let lastCommonQuizView = '';
         
         function updateCommonQuizDisplay() {
             const questionIndex = gameState.current_question_index || 0;
@@ -1201,6 +1206,9 @@
             
             if (questionIndex < commonQuizQuestions.length) {
                 const question = commonQuizQuestions[questionIndex];
+                const viewKey = questionIndex + ':' + revealStage;
+                if (viewKey === lastCommonQuizView) return;
+                lastCommonQuizView = viewKey;
                 
                 // Reset display
                 quizAnswerReveal.classList.add('hidden');
