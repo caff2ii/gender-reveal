@@ -440,6 +440,25 @@
             font-family: 'IBM Plex Mono', monospace;
             text-align: center;
         }
+
+        .reveal-word-animation {
+            animation: revealWordPop 0.55s cubic-bezier(0.22, 1.4, 0.36, 1) both;
+        }
+
+        @keyframes revealWordPop {
+            0% { opacity: 0; transform: scale(0.35) translateY(18px); }
+            70% { transform: scale(1.12) translateY(-2px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .reveal-prediction-animation {
+            animation: revealPredictionIn 0.6s ease-out both;
+        }
+
+        @keyframes revealPredictionIn {
+            from { opacity: 0; transform: translateY(24px) scale(0.92); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
     </style>
 </head>
 <body>
@@ -726,7 +745,7 @@
                             <div id="reveal-word-1" class="text-4xl font-bold mb-4">IT'S</div>
                             <div id="reveal-word-2" class="text-4xl font-bold mb-4">A</div>
                             <div id="reveal-gender" class="text-6xl font-bold mb-6">-</div>
-                            <div id="prediction-result" class="p-4 bg-gray-800 rounded-lg">
+                            <div id="prediction-result" class="hidden p-4 bg-gray-800 rounded-lg">
                                 <div class="text-sm text-gray-400 mb-2">YOUR PREDICTION</div>
                                 <div id="prediction-correct" class="text-xl font-bold">-</div>
                             </div>
@@ -862,6 +881,7 @@
         const revealWord1 = document.getElementById('reveal-word-1');
         const revealWord2 = document.getElementById('reveal-word-2');
         const revealGender = document.getElementById('reveal-gender');
+        const predictionResult = document.getElementById('prediction-result');
         const predictionCorrect = document.getElementById('prediction-correct');
         
         // Initialize
@@ -1904,6 +1924,11 @@
             revealWord1.classList.add('hidden');
             revealWord2.classList.add('hidden');
             revealGender.classList.add('hidden');
+            predictionResult.classList.add('hidden');
+            revealWord1.classList.remove('reveal-word-animation');
+            revealWord2.classList.remove('reveal-word-animation');
+            revealGender.classList.remove('reveal-word-animation');
+            predictionResult.classList.remove('reveal-prediction-animation');
             revealCountdown.classList.remove('hidden');
             
             // Anchor to the host's trigger timestamp (not a fresh local 5) so every
@@ -1936,15 +1961,36 @@
                 revealGender.textContent = secretGender === 'BOY' ? '👦 BOY!' : '👧 GIRL!';
                 revealGender.className = `text-6xl font-bold mb-6 ${secretGender === 'BOY' ? 'text-blue-500' : 'text-pink-500'}`;
                 revealGender.classList.add('hidden');
+                predictionResult.classList.add('hidden');
 
                 clearRevealSequenceTimers();
                 revealSequenceTimers = [
                     setTimeout(() => {
                         revealResult.classList.remove('hidden');
                         revealWord1.classList.remove('hidden');
+                        revealWord1.classList.add('reveal-word-animation');
                     }, 800),
-                    setTimeout(() => revealWord2.classList.remove('hidden'), 1400),
-                    setTimeout(() => revealGender.classList.remove('hidden'), 2050)
+                    setTimeout(() => {
+                        revealWord2.classList.remove('hidden');
+                        revealWord2.classList.add('reveal-word-animation');
+                    }, 1400),
+                    setTimeout(() => {
+                        revealGender.classList.remove('hidden');
+                        revealGender.classList.add('reveal-word-animation');
+                    }, 2050),
+                    setTimeout(() => {
+                        predictionResult.classList.remove('hidden');
+                        predictionResult.classList.add('reveal-prediction-animation');
+
+                        if (typeof confetti === 'function') {
+                            confetti({
+                                particleCount: 150,
+                                spread: 70,
+                                origin: { y: 0.6 },
+                                colors: secretGender === 'BOY' ? ['#3b82f6', '#60a5fa', '#93c5fd'] : ['#ec4899', '#f472b6', '#f9a8d4']
+                            });
+                        }
+                    }, 2850)
                 ];
                 
                 // Check if prediction was correct
@@ -1957,15 +2003,6 @@
                     predictionCorrect.className = 'text-xl font-bold text-gray-400';
                 }
                 
-                // Trigger confetti
-                if (typeof confetti === 'function') {
-                    confetti({
-                        particleCount: 150,
-                        spread: 70,
-                        origin: { y: 0.6 },
-                        colors: secretGender === 'BOY' ? ['#3b82f6', '#60a5fa', '#93c5fd'] : ['#ec4899', '#f472b6', '#f9a8d4']
-                    });
-                }
             });
         }
         
