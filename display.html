@@ -9,9 +9,15 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Sniglet:wght@800&display=swap" rel="stylesheet">
     
     <!-- Tailwind CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
+    
+    <!-- Animate.css + Font Awesome + GSAP (grand reveal animation) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
     
     <!-- Firebase -->
     <script src="https://cdn.jsdelivr.net/npm/firebase@10.8.0/firebase-app-compat.js"></script>
@@ -294,6 +300,186 @@
         .input-dark:focus {
             outline: none;
             border-color: #f97316;
+        }
+        
+        /* ===== Grand Reveal - pastel VS showdown animation =====
+           Everything below is scoped to #grand-reveal-screen (never bare `body`/`button`)
+           so it can't leak into the other TV screens sharing this same page. */
+        #grand-reveal-screen {
+            position: fixed;
+            inset: 0;
+            z-index: 500;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            text-align: center;
+            perspective: 1200px;
+            font-family: 'Fredoka', 'Sniglet', cursive, sans-serif;
+            color: #ffffff;
+            background: linear-gradient(115deg, #A0C4FF 0%, #B9D6F2 50%, #FFCAD4 50%, #FFADAD 100%);
+            background-size: 250% 250%;
+            background-position: 50% 50%;
+            transition: background-position 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.8s ease;
+        }
+        
+        #grand-reveal-screen:not(.hidden) {
+            display: flex;
+        }
+        
+        #grand-reveal-screen.bg-boy-win {
+            background: radial-gradient(circle at 50% 40%, #B5D4FF 0%, #A0C4FF 60%, #82ACEE 100%) !important;
+        }
+        
+        #grand-reveal-screen.bg-girl-win {
+            background: radial-gradient(circle at 50% 40%, #FFC2C2 0%, #FFADAD 60%, #FF9494 100%) !important;
+        }
+        
+        #fireworks-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 20;
+            background: transparent !important;
+        }
+        
+        #floating-graphics {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 5;
+        }
+        
+        .icon-group {
+            position: absolute;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            will-change: transform;
+        }
+        
+        .floating-icon {
+            position: absolute;
+            opacity: 0.9;
+            filter: drop-shadow(0 0 0 4px #FFFFFF);
+            will-change: transform, opacity;
+        }
+        
+        #countdown-box {
+            font-size: clamp(3.5rem, 11vw, 7.5rem);
+            font-weight: 700;
+            display: none;
+            z-index: 10;
+            will-change: transform, opacity;
+        }
+        
+        #countdown-box.boy-flash {
+            color: #3B82F6;
+            -webkit-text-stroke: 10px #FFFFFF;
+            paint-order: stroke fill;
+        }
+        
+        #countdown-box.girl-flash {
+            color: #EC4899;
+            -webkit-text-stroke: 10px #FFFFFF;
+            paint-order: stroke fill;
+        }
+        
+        .single-footprint {
+            display: inline-block;
+            vertical-align: -0.04em;
+            width: 0.85em;
+            height: 0.85em;
+            margin-left: 0.15em;
+            will-change: transform;
+        }
+        
+        .boy-flash .single-footprint {
+            fill: #3B82F6;
+        }
+        
+        .glow-boy .single-footprint {
+            fill: #3B82F6;
+            overflow: visible;
+            filter: drop-shadow(4px 6px 0 rgba(0,0,0,0.12));
+        }
+        
+        .girl-flash .single-footprint {
+            fill: #EC4899;
+        }
+        
+        .glow-girl .single-footprint {
+            fill: #EC4899;
+            overflow: visible;
+            filter: drop-shadow(4px 6px 0 rgba(0,0,0,0.12));
+        }
+        
+        #reveal-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transform-style: preserve-3d;
+            z-index: 10;
+        }
+        
+        .word-line {
+            font-family: 'Sniglet', 'Fredoka', cursive, sans-serif;
+            font-weight: 800;
+            opacity: 0;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            will-change: transform, opacity, filter;
+            text-shadow: 3px 5px 0px rgba(0,0,0,0.12);
+        }
+        
+        #word-1 {
+            font-size: clamp(2.5rem, 7vw, 4.5rem);
+            color: #64748B;
+            -webkit-text-stroke: 10px #FFFFFF;
+            paint-order: stroke fill;
+        }
+        
+        #word-2 {
+            font-size: clamp(3rem, 9vw, 6rem);
+            color: #F59E0B;
+            -webkit-text-stroke: 10px #FFFFFF;
+            paint-order: stroke fill;
+        }
+        
+        #word-3 {
+            font-size: clamp(4.5rem, 14vw, 9.5rem);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .glow-boy {
+            color: #3B82F6;
+            -webkit-text-stroke: 12px #FFFFFF;
+            paint-order: stroke fill;
+            text-shadow: 4px 6px 0px rgba(0,0,0,0.12);
+        }
+        
+        .glow-girl {
+            color: #EC4899;
+            -webkit-text-stroke: 12px #FFFFFF;
+            paint-order: stroke fill;
+            text-shadow: 4px 6px 0px rgba(0,0,0,0.12);
+        }
+        
+        #reveal-stats-panel {
+            opacity: 0;
+            margin-top: 3rem;
+            z-index: 10;
         }
     </style>
 </head>
@@ -596,20 +782,37 @@
             
             <!-- Grand Reveal Screen -->
             <div id="grand-reveal-screen" class="hidden phase-transition">
-                <div class="text-center">
-                    <div id="reveal-countdown" class="countdown-timer text-orange-500 mb-8">5</div>
-                    <div id="reveal-result" class="hidden">
-                        <div class="tv-heading mb-8">IT'S A</div>
-                        <div id="reveal-gender" class="reveal-text"></div>
-                        <div id="reveal-stats" class="mt-12">
-                            <div class="bg-gray-800/50 p-8 rounded-lg border border-gray-700 max-w-2xl mx-auto">
-                                <div class="text-sm text-gray-400 mb-4 font-mono">PREDICTION ACCURACY</div>
-                                <div id="correct-percentage" class="tv-heading text-green-500">0%</div>
-                                <div id="correct-count" class="tv-subheading mt-4">0 / 0</div>
-                            </div>
-                        </div>
+                <!-- SVG motion-blur filter used on the final BOY!/GIRL! word as it flies in -->
+                <svg style="position: absolute; width: 0; height: 0;" aria-hidden="true" focusable="false">
+                    <filter id="motion-blur-filter" x="-50%" y="-50%" width="200%" height="200%">
+                        <feGaussianBlur id="blur-val" in="SourceGraphic" stdDeviation="25, 0" />
+                    </filter>
+                </svg>
+                
+                <canvas id="fireworks-canvas"></canvas>
+                
+                <div id="floating-graphics">
+                    <div id="boy-group" class="icon-group"></div>
+                    <div id="girl-group" class="icon-group"></div>
+                </div>
+                
+                <div id="countdown-box"></div>
+                
+                <div id="reveal-container">
+                    <div id="word-1" class="word-line">IT'S</div>
+                    <div id="word-2" class="word-line">A</div>
+                    <div id="word-3" class="word-line"></div>
+                </div>
+                
+                <div id="reveal-stats-panel">
+                    <div class="bg-gray-800/50 p-8 rounded-lg border border-gray-700 max-w-2xl mx-auto">
+                        <div class="text-sm text-gray-400 mb-4 font-mono">PREDICTION ACCURACY</div>
+                        <div id="correct-percentage" class="tv-heading text-green-500">0%</div>
+                        <div id="correct-count" class="tv-subheading mt-4">0 / 0</div>
                     </div>
                 </div>
+                
+                <audio id="epic-bgm" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a731ae.mp3" preload="auto"></audio>
             </div>
         </div>
         
@@ -1197,97 +1400,463 @@
             document.getElementById('prediction-count').textContent = `${totalPredictions} / ${totalPlayers}`;
         }
         
-        function startGrandReveal() {
-            const revealCountdown = document.getElementById('reveal-countdown');
-            const revealResult = document.getElementById('reveal-result');
-            const revealGender = document.getElementById('reveal-gender');
+        // ===== Grand Reveal engine (pastel VS showdown, adapted from countdown-demo2) =====
+        const revealScreenEl = document.getElementById('grand-reveal-screen');
+        
+        const singleFootprintSVG = `
+            <svg class="single-footprint" viewBox="0 0 100 130" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <g class="footprint-shadow" transform="translate(4 6)" fill="#000000" opacity="0.12">
+                    <path d="M 40 45 C 20 45 15 65 20 85 C 25 105 35 125 55 125 C 75 125 85 105 80 85 C 75 65 60 45 40 45 Z" />
+                    <circle cx="22" cy="30" r="13" />
+                    <circle cx="40" cy="22" r="12" />
+                    <circle cx="58" cy="24" r="11" />
+                    <circle cx="73" cy="31" r="10" />
+                    <circle cx="85" cy="42" r="9" />
+                </g>
+                <path d="M 40 45 C 20 45 15 65 20 85 C 25 105 35 125 55 125 C 75 125 85 105 80 85 C 75 65 60 45 40 45 Z" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="12" stroke-linejoin="round" />
+                <circle cx="22" cy="30" r="13" fill="#FFFFFF" />
+                <circle cx="40" cy="22" r="12" fill="#FFFFFF" />
+                <circle cx="58" cy="24" r="11" fill="#FFFFFF" />
+                <circle cx="73" cy="31" r="10" fill="#FFFFFF" />
+                <circle cx="85" cy="42" r="9" fill="#FFFFFF" />
+                <path d="M 40 45 C 20 45 15 65 20 85 C 25 105 35 125 55 125 C 75 125 85 105 80 85 C 75 65 60 45 40 45 Z" fill="currentColor" />
+                <circle cx="22" cy="30" r="9" fill="currentColor" />
+                <circle cx="40" cy="22" r="8" fill="currentColor" />
+                <circle cx="58" cy="24" r="7" fill="currentColor" />
+                <circle cx="73" cy="31" r="6" fill="currentColor" />
+                <circle cx="85" cy="42" r="5" fill="currentColor" />
+            </svg>
+        `;
+        
+        let revealCountTimer = null;
+        let revealAudioCtx = null;
+        const epicBgmEl = document.getElementById('epic-bgm');
+        let bgmFadeInterval = null;
+        let revealConfettiAnimId = null;
+        let fireworksCanvas, fireworksCtx;
+        let fireworksParticles = [];
+        let fireworksAnimId = null;
+        
+        function initFireworksCanvas() {
+            fireworksCanvas = document.getElementById('fireworks-canvas');
+            fireworksCtx = fireworksCanvas.getContext('2d');
+            fireworksCanvas.width = window.innerWidth;
+            fireworksCanvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', () => {
+            if (fireworksCanvas) initFireworksCanvas();
+        });
+        
+        function initRevealAudioEngine() {
+            if (!revealAudioCtx) {
+                revealAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (revealAudioCtx.state === 'suspended') {
+                revealAudioCtx.resume();
+            }
+        }
+        
+        function playEpicBGM() {
+            initRevealAudioEngine();
+            if (bgmFadeInterval) clearInterval(bgmFadeInterval);
+            epicBgmEl.volume = 0.7;
+            epicBgmEl.currentTime = 0;
+            epicBgmEl.play().catch(e => console.log('Audio play blocked', e));
+        }
+        
+        function fadeOutEpicBGM(durationMs = 1500) {
+            if (!epicBgmEl) return;
+            const startVolume = epicBgmEl.volume;
+            const stepMs = 50;
+            const steps = durationMs / stepMs;
+            const volumeStep = startVolume / steps;
             
-            // Reset display
-            revealCountdown.classList.remove('hidden');
-            revealResult.classList.add('hidden');
+            if (bgmFadeInterval) clearInterval(bgmFadeInterval);
+            
+            bgmFadeInterval = setInterval(() => {
+                if (epicBgmEl.volume > volumeStep) {
+                    epicBgmEl.volume -= volumeStep;
+                } else {
+                    epicBgmEl.volume = 0;
+                    epicBgmEl.pause();
+                    clearInterval(bgmFadeInterval);
+                }
+            }, stepMs);
+        }
+        
+        function playModernTickSound() {
+            initRevealAudioEngine();
+            const osc = revealAudioCtx.createOscillator();
+            const gain = revealAudioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(240, revealAudioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(45, revealAudioCtx.currentTime + 0.12);
+            
+            gain.gain.setValueAtTime(0.7, revealAudioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, revealAudioCtx.currentTime + 0.12);
+            
+            osc.connect(gain);
+            gain.connect(revealAudioCtx.destination);
+            osc.start();
+            osc.stop(revealAudioCtx.currentTime + 0.12);
+        }
+        
+        function playModernImpactSound() {
+            initRevealAudioEngine();
+            const osc = revealAudioCtx.createOscillator();
+            const gain = revealAudioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(150, revealAudioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(30, revealAudioCtx.currentTime + 0.4);
+            
+            gain.gain.setValueAtTime(0.9, revealAudioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, revealAudioCtx.currentTime + 0.4);
+            
+            osc.connect(gain);
+            gain.connect(revealAudioCtx.destination);
+            osc.start();
+            osc.stop(revealAudioCtx.currentTime + 0.4);
+        }
+        
+        function launchSideCannons(mainColor, accentColor) {
+            const duration = 6 * 1000;
+            const end = Date.now() + duration;
+            
+            (function frame() {
+                confetti({
+                    particleCount: 5,
+                    angle: 60,
+                    spread: 55,
+                    origin: { x: 0, y: 0.85 },
+                    colors: [mainColor, accentColor, '#FFFFFF', '#FFE5EC']
+                });
+                confetti({
+                    particleCount: 5,
+                    angle: 120,
+                    spread: 55,
+                    origin: { x: 1, y: 0.85 },
+                    colors: [mainColor, accentColor, '#FFFFFF', '#FFE5EC']
+                });
+                
+                if (Date.now() < end) {
+                    revealConfettiAnimId = requestAnimationFrame(frame);
+                }
+            })();
+        }
+        
+        function createFirework(x, y, color) {
+            playModernImpactSound();
+            const count = 50;
+            for (let i = 0; i < count; i++) {
+                const angle = (Math.PI * 2 / count) * i + (Math.random() * 0.2);
+                const speed = Math.random() * 8 + 3;
+                fireworksParticles.push({
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    alpha: 1,
+                    decay: Math.random() * 0.015 + 0.01,
+                    color: color,
+                    size: Math.random() * 4 + 2
+                });
+            }
+        }
+        
+        function renderFireworks() {
+            fireworksCtx.clearRect(0, 0, fireworksCanvas.width, fireworksCanvas.height);
+            
+            for (let i = fireworksParticles.length - 1; i >= 0; i--) {
+                const p = fireworksParticles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.06;
+                p.alpha -= p.decay;
+                
+                fireworksCtx.save();
+                fireworksCtx.globalAlpha = p.alpha;
+                fireworksCtx.fillStyle = p.color;
+                fireworksCtx.beginPath();
+                fireworksCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                fireworksCtx.fill();
+                fireworksCtx.restore();
+                
+                if (p.alpha <= 0) {
+                    fireworksParticles.splice(i, 1);
+                }
+            }
+            
+            fireworksAnimId = requestAnimationFrame(renderFireworks);
+        }
+        
+        function triggerContinuousFireworks(colorHex) {
+            initFireworksCanvas();
+            fireworksParticles = [];
+            if (fireworksAnimId) cancelAnimationFrame(fireworksAnimId);
+            renderFireworks();
+            
+            let timer = setInterval(() => {
+                const x = Math.random() * (fireworksCanvas.width * 0.8) + fireworksCanvas.width * 0.1;
+                const y = Math.random() * (fireworksCanvas.height * 0.4) + fireworksCanvas.height * 0.1;
+                createFirework(x, y, colorHex);
+            }, 600);
+            
+            setTimeout(() => clearInterval(timer), 6000);
+        }
+        
+        function cleanRevealScreen() {
+            if (revealCountTimer) clearInterval(revealCountTimer);
+            if (fireworksAnimId) cancelAnimationFrame(fireworksAnimId);
+            if (revealConfettiAnimId) cancelAnimationFrame(revealConfettiAnimId);
+            fadeOutEpicBGM(300);
+            
+            revealScreenEl.className = 'phase-transition';
+            revealScreenEl.style.backgroundPosition = '50% 50%';
+            
+            const boyGroup = document.getElementById('boy-group');
+            const girlGroup = document.getElementById('girl-group');
+            boyGroup.style.transform = 'translateX(0px)';
+            girlGroup.style.transform = 'translateX(0px)';
+            boyGroup.innerHTML = '';
+            girlGroup.innerHTML = '';
+            
+            if (fireworksCtx && fireworksCanvas) {
+                fireworksCtx.clearRect(0, 0, fireworksCanvas.width, fireworksCanvas.height);
+            }
+            
+            gsap.killTweensOf('#countdown-box, #word-1, #word-2, #word-3, .floating-icon, #grand-reveal-screen, #reveal-stats-panel');
+            
+            const countBox = document.getElementById('countdown-box');
+            countBox.style.display = 'none';
+            
+            const w1 = document.getElementById('word-1');
+            const w2 = document.getElementById('word-2');
+            const w3 = document.getElementById('word-3');
+            
+            [w1, w2, w3].forEach(el => {
+                el.style.opacity = '0';
+                el.className = 'word-line';
+                el.style.filter = 'none';
+            });
+            
+            const statsPanel = document.getElementById('reveal-stats-panel');
+            statsPanel.style.opacity = '0';
+            
+            const blurVal = document.getElementById('blur-val');
+            if (blurVal) blurVal.setAttribute('stdDeviation', '0, 0');
+            
+            confetti.reset();
+        }
+        
+        function startGrandReveal() {
+            database.ref(window.CONFIG.dbPaths.secretGender).once('value', (snapshot) => {
+                const secretGender = snapshot.val() === 'BOY' ? 'BOY' : 'GIRL';
+                startRevealProcess(secretGender);
+            });
+        }
+        
+        function startRevealProcess(gender) {
+            cleanRevealScreen();
+            playEpicBGM();
+            
+            spawnVSIcons();
+            
+            const countBox = document.getElementById('countdown-box');
+            countBox.style.display = 'block';
             
             let count = 5;
-            revealCountdown.textContent = count;
             
-            const countdown = setInterval(() => {
+            runCountdownStep(count, countBox);
+            
+            revealCountTimer = setInterval(() => {
                 count--;
-                if (count > 0) {
-                    revealCountdown.textContent = count;
+                if (count >= 1) {
+                    runCountdownStep(count, countBox);
                 } else {
-                    clearInterval(countdown);
-                    revealCountdown.classList.add('hidden');
-                    showRevealResult();
+                    clearInterval(revealCountTimer);
+                    revealScreenEl.style.backgroundPosition = '50% 50%';
+                    document.getElementById('boy-group').style.transform = 'translateX(0px)';
+                    document.getElementById('girl-group').style.transform = 'translateX(0px)';
+                    
+                    setTimeout(() => {
+                        countBox.style.display = 'none';
+                        trigger3DFlyInReveal(gender);
+                    }, 800);
                 }
             }, 1000);
         }
         
-        function showRevealResult() {
-            database.ref(window.CONFIG.dbPaths.secretGender).once('value', (snapshot) => {
-                const secretGender = snapshot.val();
-                
-                const revealResult = document.getElementById('reveal-result');
-                const revealGender = document.getElementById('reveal-gender');
-                
-                revealResult.classList.remove('hidden');
-                revealGender.textContent = secretGender === 'BOY' ? '👦 BOY!' : '👧 GIRL!';
-                revealGender.className = `reveal-text ${secretGender === 'BOY' ? 'text-blue-500' : 'text-pink-500'}`;
-                
-                // Calculate statistics
-                let correctCount = 0;
-                let totalPredictions = 0;
-                
-                Object.values(players).forEach(player => {
-                    if (player.final_prediction) {
-                        totalPredictions++;
-                        if (player.final_prediction === secretGender) {
-                            correctCount++;
-                        }
-                    }
-                });
-                
-                const percentage = totalPredictions > 0 ? Math.round((correctCount / totalPredictions) * 100) : 0;
-                
-                document.getElementById('correct-percentage').textContent = `${percentage}%`;
-                document.getElementById('correct-count').textContent = `${correctCount} / ${totalPredictions}`;
-                
-                // Trigger confetti
-                if (typeof confetti === 'function') {
-                    const colors = secretGender === 'BOY' 
-                        ? ['#3b82f6', '#60a5fa', '#93c5fd', '#ffffff']
-                        : ['#ec4899', '#f472b6', '#f9a8d4', '#ffffff'];
-                    
-                    confetti({
-                        particleCount: 200,
-                        spread: 100,
-                        origin: { y: 0.6 },
-                        colors: colors
-                    });
-                    
-                    // Continuous confetti
-                    const duration = 5 * 1000;
-                    const end = Date.now() + duration;
-                    
-                    (function frame() {
-                        confetti({
-                            particleCount: 5,
-                            angle: 60,
-                            spread: 55,
-                            origin: { x: 0 },
-                            colors: colors
-                        });
-                        confetti({
-                            particleCount: 5,
-                            angle: 120,
-                            spread: 55,
-                            origin: { x: 1 },
-                            colors: colors
-                        });
+        function runCountdownStep(count, countBox) {
+            const isBoyTurn = count % 2 === 1;
+            countBox.className = isBoyTurn ? 'boy-flash' : 'girl-flash';
+            countBox.innerHTML = isBoyTurn ? `${count} BOY? ${singleFootprintSVG}` : `${count} GIRL? ${singleFootprintSVG}`;
+            
+            playModernTickSound();
+            
+            const posMap = {
+                5: '15% 50%',
+                4: '85% 50%',
+                3: '25% 50%',
+                2: '75% 50%',
+                1: '35% 50%'
+            };
+            revealScreenEl.style.backgroundPosition = posMap[count] || '50% 50%';
+            
+            const boyGroup = document.getElementById('boy-group');
+            const girlGroup = document.getElementById('girl-group');
+            
+            const offsetPx = isBoyTurn ? 120 : -120;
+            boyGroup.style.transform = `translateX(${offsetPx}px)`;
+            girlGroup.style.transform = `translateX(${offsetPx}px)`;
+            
+            gsap.fromTo(revealScreenEl,
+                { x: isBoyTurn ? -10 : 10 },
+                { x: 0, duration: 0.35, ease: 'elastic.out(1.2, 0.4)', force3D: true }
+            );
+            
+            gsap.fromTo(countBox,
+                { scale: 2.3, rotate: isBoyTurn ? -8 : 8, opacity: 0 },
+                { scale: 1, rotate: 0, opacity: 1, duration: 0.45, ease: 'back.out(2)', force3D: true }
+            );
+        }
+        
+        function trigger3DFlyInReveal(gender) {
+            const isGirl = gender === 'GIRL';
+            const mainColor = isGirl ? '#FF85A2' : '#70A6FF';
+            const accentColor = '#FFFFFF';
+            
+            const w1 = document.getElementById('word-1');
+            const w2 = document.getElementById('word-2');
+            const w3 = document.getElementById('word-3');
+            const blurVal = document.getElementById('blur-val');
+            
+            w3.innerHTML = isGirl ? `GIRL! ${singleFootprintSVG}` : `BOY! ${singleFootprintSVG}`;
+            w3.classList.add(isGirl ? 'glow-girl' : 'glow-boy');
+            
+            const tl = gsap.timeline();
+            
+            tl.fromTo(w1,
+                { opacity: 0, scale: 0.1, z: -800, rotate: -5 },
+                { opacity: 1, scale: 1, z: 0, rotate: 0, duration: 0.45, ease: 'power4.out', force3D: true, onStart: () => playModernImpactSound() }
+            )
+            .fromTo(w2,
+                { opacity: 0, scale: 0.1, z: -600, rotate: 5 },
+                { opacity: 1, scale: 1, z: 0, rotate: 0, duration: 0.45, ease: 'power4.out', force3D: true, onStart: () => playModernImpactSound() },
+                '+=0.15'
+            )
+            .fromTo(w3,
+                { opacity: 0, scale: 3.5, z: 500 },
+                {
+                    opacity: 1, scale: 1, z: 0, duration: 0.7, ease: 'back.out(1.5)', force3D: true,
+                    onStart: () => {
+                        revealScreenEl.classList.add(isGirl ? 'bg-girl-win' : 'bg-boy-win');
+                        unifyIconColors('#FFFFFF');
+                        fadeOutEpicBGM(1500);
                         
-                        if (Date.now() < end) {
-                            requestAnimationFrame(frame);
-                        }
-                    }());
+                        w3.style.filter = 'url(#motion-blur-filter)';
+                        if (blurVal) blurVal.setAttribute('stdDeviation', '40, 0');
+                        
+                        setTimeout(() => {
+                            launchSideCannons(mainColor, accentColor);
+                            triggerContinuousFireworks(mainColor);
+                        }, 150);
+                    },
+                    onUpdate: function() {
+                        let progress = this.progress();
+                        let currentBlur = Math.max(0, 40 * (1 - progress * 1.3));
+                        if (blurVal) blurVal.setAttribute('stdDeviation', `${currentBlur}, 0`);
+                    },
+                    onComplete: () => {
+                        w3.style.filter = 'none';
+                        w3.classList.add('animate__animated', 'animate__pulse', 'animate__infinite');
+                        showRevealStats(gender);
+                    }
+                },
+                '+=0.2'
+            );
+        }
+        
+        function showRevealStats(secretGender) {
+            let correctCount = 0;
+            let totalPredictions = 0;
+            
+            Object.values(players).forEach(player => {
+                if (player.final_prediction) {
+                    totalPredictions++;
+                    if (player.final_prediction === secretGender) {
+                        correctCount++;
+                    }
                 }
+            });
+            
+            const percentage = totalPredictions > 0 ? Math.round((correctCount / totalPredictions) * 100) : 0;
+            
+            document.getElementById('correct-percentage').textContent = `${percentage}%`;
+            document.getElementById('correct-count').textContent = `${correctCount} / ${totalPredictions}`;
+            
+            gsap.to('#reveal-stats-panel', { opacity: 1, duration: 0.6, ease: 'power2.out' });
+        }
+        
+        function spawnVSIcons() {
+            const boyGroup = document.getElementById('boy-group');
+            const girlGroup = document.getElementById('girl-group');
+            boyGroup.innerHTML = '';
+            girlGroup.innerHTML = '';
+            
+            const boyIcons = ['fa-baby', 'fa-gamepad', 'fa-rocket', 'fa-car', 'fa-trophy', 'fa-robot', 'fa-bolt'];
+            const girlIcons = ['fa-baby', 'fa-heart', 'fa-star', 'fa-wand-magic-sparkles', 'fa-cookie-bite', 'fa-gem', 'fa-ribbon'];
+            
+            const boyColor = '#70A6FF';
+            const girlColor = '#FF85A2';
+            
+            for (let i = 0; i < 36; i++) {
+                const boyIcon = document.createElement('i');
+                boyIcon.className = `fa-solid ${boyIcons[i % boyIcons.length]} floating-icon`;
+                boyIcon.style.color = boyColor;
+                boyIcon.style.fontSize = `${Math.random() * 1.8 + 1.2}rem`;
+                boyIcon.style.left = `${Math.random() * 48}%`;
+                boyIcon.style.top = `${Math.random() * 88 + 5}%`;
+                boyGroup.appendChild(boyIcon);
+                
+                const girlIcon = document.createElement('i');
+                girlIcon.className = `fa-solid ${girlIcons[i % girlIcons.length]} floating-icon`;
+                girlIcon.style.color = girlColor;
+                girlIcon.style.fontSize = `${Math.random() * 1.8 + 1.2}rem`;
+                girlIcon.style.left = `${Math.random() * 48 + 52}%`;
+                girlIcon.style.top = `${Math.random() * 88 + 5}%`;
+                girlGroup.appendChild(girlIcon);
+                
+                [boyIcon, girlIcon].forEach(icon => {
+                    gsap.fromTo(icon,
+                        { opacity: 0, scale: 0, z: -300, rotate: Math.random() * 90 - 45 },
+                        {
+                            opacity: 0.9,
+                            scale: 1,
+                            z: Math.random() * 200,
+                            duration: 1,
+                            delay: Math.random() * 0.4,
+                            ease: 'back.out(1.7)',
+                            force3D: true,
+                            onComplete: () => {
+                                gsap.to(icon, {
+                                    y: `-=${Math.random() * 20 + 10}`,
+                                    duration: 2 + Math.random() * 2,
+                                    repeat: -1,
+                                    yoyo: true,
+                                    ease: 'sine.inOut',
+                                    force3D: true
+                                });
+                            }
+                        }
+                    );
+                });
+            }
+        }
+        
+        function unifyIconColors(winnerColor) {
+            const icons = document.querySelectorAll('#grand-reveal-screen .floating-icon');
+            icons.forEach(icon => {
+                icon.style.color = winnerColor;
             });
         }
         
