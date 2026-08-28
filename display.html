@@ -327,6 +327,7 @@
             <div id="game1-quiz-screen" class="hidden phase-transition">
                 <div id="group-quiz-display" class="hidden">
                     <h2 class="tv-heading mb-8 font-mono text-orange-500">專屬考驗進行中</h2>
+                    <div id="group-quiz-progress" class="font-mono text-xl text-gray-400 mb-8">完成: 0 / 0</div>
                     <div class="max-w-2xl mx-auto">
                         <h3 class="tv-subheading mb-6">TOP 10 AGENTS</h3>
                         <div id="group-quiz-leaderboard" class="space-y-4">
@@ -772,6 +773,11 @@
         function updateGroupQuizLeaderboard() {
             const leaderboard = document.getElementById('group-quiz-leaderboard');
             leaderboard.innerHTML = '';
+            
+            // Live progress of the self-paced group quiz
+            const totalPlayers = Object.keys(players).length;
+            const donePlayers = Object.values(players).filter(p => p.group_quiz_done === true).length;
+            document.getElementById('group-quiz-progress').textContent = `完成: ${donePlayers} / ${totalPlayers}`;
             
             const playerArray = Object.values(players).sort((a, b) => (b.score || 0) - (a.score || 0));
             const top10 = playerArray.slice(0, 10);

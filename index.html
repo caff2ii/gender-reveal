@@ -370,6 +370,15 @@
                         </div>
                         <div id="quiz-timer" class="mt-4 text-center font-mono text-2xl hidden">15</div>
                     </div>
+                    
+                    <!-- Waiting screen after finishing own group questions -->
+                    <div id="group-quiz-waiting" class="evidence-board p-6 rounded-lg text-center hidden">
+                        <div class="text-4xl mb-4">🕵️</div>
+                        <div class="text-xl font-bold mb-2 font-mono text-orange-500">專屬題完成!</div>
+                        <p class="text-gray-400 mb-6">你已完成所有專屬題目，表現出色。</p>
+                        <div class="spinner mx-auto mb-4"></div>
+                        <p class="text-gray-400">等待其他 agent 完成專屬題，全員完成後會一齊進入共同題...</p>
+                    </div>
                 </div>
                 
                 <!-- Game 1 Settlement -->
@@ -732,6 +741,10 @@
                 if (currentPlayer) {
                     loadGroupQuizQuestions();
                     loadCommonQuizQuestions();
+                    // Re-render if questions arrived after the quiz screen was drawn
+                    if (currentPhase === 'GAME1_QUIZ') {
+                        loadQuiz();
+                    }
                 }
             }, (error) => {
                 console.warn('Questions listener error:', error);
@@ -990,28 +1003,58 @@
             quizScore.textContent = currentPlayer.score || 0;
             
             const stage = gameState.game1_stage || 'GROUP';
-            const questionIndex = gameState.current_question_index || 0;
-            
-            let currentQuestions = [];
-            let totalQuestions = 0;
             
             if (stage === 'GROUP') {
-                currentQuestions = groupQuizQuestions;
-                totalQuestions = window.CONFIG.game1.groupQuizCount;
-            } else {
-                currentQuestions = commonQuizQuestions;
-                totalQuestions = window.CONFIG.game1.commonQuizCount;
+                // Self-paced: each player advances through their own group questions
+                const groupIndex = currentPlayer.group_quiz_index || 0;
+                const total = groupQuizQuestions.length || window.CONFIG.game1.groupQuizCount;
+                quizProgress.style.width = `${Math.min((groupIndex / total) * 100, 100)}%`;
+                
+                // Self-heal: if progress shows finished but the flag is missing, set it
+                if (!currentPlayer.group_quiz_done && groupQuizQuestions.length > 0 && groupIndex >= groupQuizQuestions.length) {
+                    currentPlayer.group_quiz_done = true;
+                    database.ref(`${window.CONFIG.dbPaths.players}/${currentPlayer.id}`).update({
+                        group_quiz_done: true,
+                        group_quiz_completed_at: firebase.database.ServerValue.TIMESTAMP
+                    });
+                }
+                
+                if (currentPlayer.group_quiz_done || (groupQuizQuestions.length > 0 && groupIndex >= groupQuizQuestions.length)) {
+                    // All own group questions answered - wait for the others
+                    showGroupQuizWaiting(true);
+                    return;
+                }
+                
+                showGroupQuizWaiting(false);
+                
+                if (groupIndex < groupQuizQuestions.length) {
+                    displayQuizQuestion(groupQuizQuestions[groupIndex], 'GROUP');
+                } else {
+                    // Questions not loaded yet
+                    quizQuestion.textContent = '載入中...';
+                    quizOptions.innerHTML = '';
+                }
+                return;
             }
             
-            const progress = ((questionIndex + 1) / totalQuestions) * 100;
-            quizProgress.style.width = `${progress}%`;
+            showGroupQuizWaiting(false);
             
-            if (questionIndex < currentQuestions.length) {
-                displayQuizQuestion(currentQuestions[questionIndex], stage);
+            // COMMON stage - paced by the host for everyone
+            const questionIndex = gameState.current_question_index || 0;
+            const totalQuestions = window.CONFIG.game1.commonQuizCount;
+            quizProgress.style.width = `${((questionIndex + 1) / totalQuestions) * 100}%`;
+            
+            if (questionIndex < commonQuizQuestions.length) {
+                displayQuizQuestion(commonQuizQuestions[questionIndex], 'COMMON');
             } else {
                 quizQuestion.textContent = 'Waiting for next question...';
                 quizOptions.innerHTML = '';
             }
+        }
+        
+        function showGroupQuizWaiting(show) {
+            document.getElementById('group-quiz-waiting').classList.toggle('hidden', !show);
+            document.getElementById('quiz-container').classList.toggle('hidden', show);
         }
         
         function displayQuizQuestion(question, stage) {
@@ -1052,8 +1095,6 @@
             
             // Update player score
             const newScore = (currentPlayer.score || 0) + points;
-            database.ref(`${window.CONFIG.dbPaths.players}/${currentPlayer.id}/score`).set(newScore);
-            currentPlayer.score = newScore;
             
             // Disable options
             quizOptions.querySelectorAll('button').forEach(btn => {
@@ -1062,6 +1103,32 @@
             });
             
             quizScore.textContent = newScore;
+            
+            if (stage === 'GROUP') {
+                // Self-paced: advance this player's own progress atomically with the score
+                const newIndex = (currentPlayer.group_quiz_index || 0) + 1;
+                const updates = {
+                    score: newScore,
+                    group_quiz_index: newIndex
+                };
+                
+                currentPlayer.score = newScore;
+                currentPlayer.group_quiz_index = newIndex;
+                
+                if (groupQuizQuestions.length > 0 && newIndex >= groupQuizQuestions.length) {
+                    updates.group_quiz_done = true;
+                    updates.group_quiz_completed_at = firebase.database.ServerValue.TIMESTAMP;
+                    currentPlayer.group_quiz_done = true;
+                }
+                
+                database.ref(`${window.CONFIG.dbPaths.players}/${currentPlayer.id}`).update(updates);
+                
+                // Brief pause so the player sees the disabled options, then next question / waiting screen
+                setTimeout(() => loadQuiz(), 600);
+            } else {
+                database.ref(`${window.CONFIG.dbPaths.players}/${currentPlayer.id}/score`).set(newScore);
+                currentPlayer.score = newScore;
+            }
         }
         
         function startQuizTimer() {

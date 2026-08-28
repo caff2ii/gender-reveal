@@ -315,6 +315,7 @@
                     <div class="mt-4 text-sm text-gray-400">
                         <div>Question: <span id="quiz-question-num" class="text-white">0</span> / 8</div>
                         <div>Stage: <span id="quiz-stage" class="text-white">GROUP</span></div>
+                        <div>Group quiz finished: <span id="quiz-done-count" class="text-white">-</span></div>
                     </div>
                 </div>
                 
@@ -409,6 +410,7 @@
         const startCountdownBtn = document.getElementById('start-countdown-btn');
         const quizQuestionNum = document.getElementById('quiz-question-num');
         const quizStage = document.getElementById('quiz-stage');
+        const quizDoneCount = document.getElementById('quiz-done-count');
         
         const drawBingoBtn = document.getElementById('draw-bingo-btn');
         const currentBingoPhrase = document.getElementById('current-bingo-phrase');
@@ -482,6 +484,7 @@
                 players = snapshot.val() || {};
                 playerCountEl.textContent = Object.keys(players).length;
                 updateBingoStats();
+                checkGroupQuizCompletion();
             });
         }
         
@@ -568,6 +571,14 @@
         function updateGame1UI() {
             quizQuestionNum.textContent = gameState.current_question_index || 0;
             quizStage.textContent = gameState.game1_stage || 'GROUP';
+            
+            // Group quiz is self-paced - show how many players finished
+            const playerIds = Object.keys(players);
+            const doneCount = playerIds.filter(id => players[id].group_quiz_done === true).length;
+            quizDoneCount.textContent = playerIds.length > 0 ? `${doneCount} / ${playerIds.length}` : '-';
+            
+            // During the group stage players answer on their own, so this button force-starts the common quiz
+            nextQuizStepBtn.textContent = (gameState.game1_stage || 'GROUP') === 'GROUP' ? 'FORCE START COMMON QUIZ' : 'NEXT QUIZ STEP';
         }
         
         function updateGame2UI() {
@@ -668,33 +679,47 @@
         
         function advanceQuizStep() {
             const currentStage = gameState.game1_stage || 'GROUP';
-            const currentIndex = gameState.current_question_index || 0;
             
             if (currentStage === 'GROUP') {
-                // Check if group quiz is done (3 questions per group)
-                if (currentIndex >= 2) {
-                    // Move to common quiz
+                // Group quiz is self-paced - players advance on their own devices.
+                // This button force-starts the common quiz without waiting for everyone.
+                if (confirm('Force start the common quiz now? Players who have not finished their group questions will be moved on.')) {
                     database.ref(window.CONFIG.dbPaths.gameState).update({
                         game1_stage: 'COMMON',
                         current_question_index: 0
                     });
-                } else {
-                    // Next group question
-                    database.ref(window.CONFIG.dbPaths.gameState).update({
-                        current_question_index: currentIndex + 1
-                    });
                 }
+                return;
+            }
+            
+            const currentIndex = gameState.current_question_index || 0;
+            
+            // Common quiz
+            if (currentIndex >= 4) {
+                // Quiz complete, move to settlement
+                advanceToPhase('GAME1_SETTLE');
             } else {
-                // Common quiz
-                if (currentIndex >= 4) {
-                    // Quiz complete, move to settlement
-                    advanceToPhase('GAME1_SETTLE');
-                } else {
-                    // Next common question
-                    database.ref(window.CONFIG.dbPaths.gameState).update({
-                        current_question_index: currentIndex + 1
-                    });
-                }
+                // Next common question
+                database.ref(window.CONFIG.dbPaths.gameState).update({
+                    current_question_index: currentIndex + 1
+                });
+            }
+        }
+        
+        function checkGroupQuizCompletion() {
+            if (currentPhase !== 'GAME1_QUIZ') return;
+            if ((gameState.game1_stage || 'GROUP') !== 'GROUP') return;
+            
+            const playerIds = Object.keys(players);
+            if (playerIds.length === 0) return;
+            
+            const allDone = playerIds.every(id => players[id].group_quiz_done === true);
+            if (allDone) {
+                // Everyone finished their group questions - start the common quiz together
+                database.ref(window.CONFIG.dbPaths.gameState).update({
+                    game1_stage: 'COMMON',
+                    current_question_index: 0
+                });
             }
         }
         
