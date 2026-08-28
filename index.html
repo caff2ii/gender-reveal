@@ -595,6 +595,9 @@
         let groupQuizQuestions = [];
         let commonQuizQuestions = [];
         let questionsLoaded = false;
+        let commonQuizTimerInterval = null;
+        let lastCommonQuizView = '';
+        let myCommonAnswer = null;
         let currentQuizIndex = 0;
         let bingoBoard = [];
         let markedCells = [];
@@ -1013,6 +1016,12 @@
             
             const stage = gameState.game1_stage || 'GROUP';
             
+            if (stage !== 'COMMON') {
+                // Leaving the common quiz - reset the host-controlled view state
+                stopQuizTimer();
+                lastCommonQuizView = '';
+            }
+            
             if (stage === 'GROUP') {
                 // Self-paced: each player advances through their own group questions
                 const groupIndex = currentPlayer.group_quiz_index || 0;
@@ -1059,17 +1068,48 @@
             
             showGroupQuizWaiting(false);
             
-            // COMMON stage - paced by the host for everyone
+            // COMMON stage - fully host-controlled, in sync with display.html:
+            // reveal stage 0 = question only, 1 = answers + countdown, 2 = reveal correct answer
             const questionIndex = gameState.current_question_index || 0;
+            const revealStage = gameState.common_reveal_stage || 0;
             const totalQuestions = window.CONFIG.game1.commonQuizCount;
             quizProgress.style.width = `${((questionIndex + 1) / totalQuestions) * 100}%`;
             
-            if (questionIndex < commonQuizQuestions.length) {
-                displayQuizQuestion(commonQuizQuestions[questionIndex], 'COMMON');
-            } else {
+            if (questionIndex >= commonQuizQuestions.length) {
+                stopQuizTimer();
+                lastCommonQuizView = '';
                 quizQuestion.textContent = 'Waiting for next question...';
                 quizOptions.innerHTML = '';
+                return;
             }
+            
+            const question = commonQuizQuestions[questionIndex];
+            const viewKey = questionIndex + ':' + revealStage;
+            const viewChanged = viewKey !== lastCommonQuizView;
+            
+            if (revealStage === 0) {
+                // Host is showing the question only - options not revealed yet
+                if (viewChanged) {
+                    myCommonAnswer = null;
+                    quizQuestion.textContent = question.q;
+                    quizOptions.innerHTML = '<p class="text-center text-gray-400 py-4">等緊主持人公佈選項...</p>';
+                    stopQuizTimer();
+                }
+            } else if (revealStage === 1) {
+                // Countdown is running - options revealed, players may answer now
+                if (viewChanged) {
+                    displayQuizQuestion(question, 'COMMON');
+                    startQuizTimer();
+                }
+            } else {
+                // Host revealed the correct answer
+                if (viewChanged) {
+                    stopQuizTimer();
+                    renderQuizResult(question);
+                }
+            }
+            
+            lastCommonQuizView = viewKey;
         }
         
         function showGroupQuizWaiting(show) {
@@ -1089,18 +1129,15 @@
                 btn.addEventListener('click', () => submitAnswer(question, index, stage));
                 quizOptions.appendChild(btn);
             });
-            
-            // For common quiz, show timer when countdown starts
-            if (stage === 'COMMON' && gameState.common_reveal_stage > 0) {
-                quizTimer.classList.remove('hidden');
-                startQuizTimer();
-            } else {
-                quizTimer.classList.add('hidden');
-            }
         }
         
         function submitAnswer(question, answerIndex, stage) {
             if (!currentPlayer) return;
+            
+            // Common quiz answers are only accepted while the host's countdown is running
+            if (stage === 'COMMON' && (gameState.common_reveal_stage || 0) !== 1) {
+                return;
+            }
             
             let points = 0;
             if (answerIndex === question.answer) {
@@ -1115,6 +1152,10 @@
             
             // Update player score
             const newScore = (currentPlayer.score || 0) + points;
+            
+            if (stage === 'COMMON') {
+                myCommonAnswer = answerIndex;
+            }
             
             // Disable options
             quizOptions.querySelectorAll('button').forEach(btn => {
@@ -1152,17 +1193,76 @@
         }
         
         function startQuizTimer() {
-            let timeLeft = 15;
-            quizTimer.textContent = timeLeft;
+            stopQuizTimer();
+            quizTimer.classList.remove('hidden');
             
-            const timer = setInterval(() => {
-                timeLeft--;
-                quizTimer.textContent = timeLeft;
+            // Sync with the host: count down from when the host started the countdown,
+            // so reloads / late joiners see the correct remaining time
+            const startedAt = gameState.countdown_started_at || Date.now();
+            const duration = window.CONFIG.game1.commonQuizTimeout;
+            
+            const tick = () => {
+                const elapsed = (Date.now() - startedAt) / 1000;
+                const remaining = Math.max(0, Math.ceil(duration - elapsed));
+                quizTimer.textContent = remaining;
                 
-                if (timeLeft <= 0) {
-                    clearInterval(timer);
+                if (remaining <= 0) {
+                    stopQuizTimer();
+                    // Time is up - lock options until the host reveals the answer
+                    lockQuizOptions(true);
                 }
-            }, 1000);
+            };
+            
+            tick();
+            commonQuizTimerInterval = setInterval(tick, 250);
+        }
+        
+        function stopQuizTimer() {
+            if (commonQuizTimerInterval) {
+                clearInterval(commonQuizTimerInterval);
+                commonQuizTimerInterval = null;
+            }
+            quizTimer.classList.add('hidden');
+        }
+        
+        function lockQuizOptions(disabled) {
+            quizOptions.querySelectorAll('button').forEach(btn => {
+                btn.disabled = disabled;
+                if (disabled) {
+                    btn.classList.add('opacity-50');
+                } else {
+                    btn.classList.remove('opacity-50');
+                }
+            });
+        }
+        
+        function renderQuizResult(question) {
+            quizTimer.classList.add('hidden');
+            quizQuestion.textContent = question.q;
+            quizOptions.innerHTML = '';
+            
+            const labels = ['A', 'B', 'C', 'D'];
+            question.options.forEach((option, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'w-full p-4 bg-gray-800 rounded-lg text-left transition-colors';
+                btn.disabled = true;
+                
+                let suffix = '';
+                if (index === question.answer) {
+                    suffix = ' ✓';
+                    btn.classList.add('bg-green-800', 'ring-2', 'ring-green-500');
+                } else if (index === myCommonAnswer) {
+                    btn.classList.add('bg-red-800');
+                }
+                btn.innerHTML = `<span class="font-mono text-orange-500 mr-2">${labels[index]}.</span> ${window.GenderRevealUtils.escapeHtml(option)}${suffix}`;
+                quizOptions.appendChild(btn);
+            });
+            
+            if (myCommonAnswer === null) {
+                quizQuestion.textContent = question.q + '（時間到，未作答）';
+            } else if (myCommonAnswer === question.answer) {
+                quizQuestion.textContent = question.q + ' — 答啱！';
+            }
         }
         
         function showGame1Settlement() {

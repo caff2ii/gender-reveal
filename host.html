@@ -686,7 +686,8 @@
                 if (confirm('Force start the common quiz now? Players who have not finished their group questions will be moved on.')) {
                     database.ref(window.CONFIG.dbPaths.gameState).update({
                         game1_stage: 'COMMON',
-                        current_question_index: 0
+                        current_question_index: 0,
+                        common_reveal_stage: 0
                     });
                 }
                 return;
@@ -699,9 +700,11 @@
                 // Quiz complete, move to settlement
                 advanceToPhase('GAME1_SETTLE');
             } else {
-                // Next common question
+                // Next common question - reset the reveal stage so the question
+                // is shown first (answers and countdown come with START COUNTDOWN)
                 database.ref(window.CONFIG.dbPaths.gameState).update({
-                    current_question_index: currentIndex + 1
+                    current_question_index: currentIndex + 1,
+                    common_reveal_stage: 0
                 });
             }
         }
@@ -718,18 +721,23 @@
                 // Everyone finished their group questions - start the common quiz together
                 database.ref(window.CONFIG.dbPaths.gameState).update({
                     game1_stage: 'COMMON',
-                    current_question_index: 0
+                    current_question_index: 0,
+                    common_reveal_stage: 0
                 });
             }
         }
         
         function startQuizCountdown() {
-            // This would trigger a countdown on the display
-            // For now, we'll just advance the reveal stage
+            // Advance the reveal stage: 0 = question only, 1 = answers + countdown, 2 = reveal correct answer
             const currentRevealStage = gameState.common_reveal_stage || 0;
-            database.ref(window.CONFIG.dbPaths.gameState).update({
+            const updates = {
                 common_reveal_stage: currentRevealStage + 1
-            });
+            };
+            if (currentRevealStage === 0) {
+                // Record when the countdown started so player devices stay in sync
+                updates.countdown_started_at = firebase.database.ServerValue.TIMESTAMP;
+            }
+            database.ref(window.CONFIG.dbPaths.gameState).update(updates);
         }
         
         function drawNextBingoPhrase() {
