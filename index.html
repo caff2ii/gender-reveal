@@ -976,7 +976,15 @@
                 bingoPhrases = snapshot.val() || {};
                 
                 if (currentPlayer && currentPhase === 'GAME2_BINGO') {
-                    updateBingoDisplay();
+                    // A player who reached this screen before bingo_phrases had
+                    // loaded (e.g. joining mid-game) would have an empty board -
+                    // now that phrases are available, (re)generate it instead of
+                    // just re-rendering the still-empty board.
+                    if (!bingoBoard || bingoBoard.length === 0) {
+                        initBingoBoard();
+                    } else {
+                        updateBingoDisplay();
+                    }
                 }
             }, (error) => {
                 console.warn('Bingo phrases listener error:', error);
@@ -1580,6 +1588,13 @@
         
         function generateBingoBoard() {
             const phraseKeys = Object.keys(bingoPhrases);
+            
+            // bingo_phrases may not have loaded yet (e.g. a player joining mid-game
+            // reaches this screen before the listener's data arrives) - bail out
+            // without saving an empty board. setupBingoPhrasesListener will retry
+            // generation once the phrases actually arrive.
+            if (phraseKeys.length === 0) return;
+            
             const shuffled = phraseKeys.sort(() => Math.random() - 0.5);
             const selectedKeys = shuffled.slice(0, 9);
             
