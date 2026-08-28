@@ -1,466 +1,231 @@
 <!DOCTYPE html>
-<html lang="zh-HK">
+<html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>DETECTIVE DOSSIER - Player Portal</title>
-  <script src="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/firebase@10.8.0/firebase-app-compat.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/firebase@10.8.0/firebase-database-compat.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/howler@2.2.4/dist/howler.min.js"></script>
-  <script src="config.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>THE CASE - Gender Reveal Mystery</title>
   <style>
-    .bingo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-    .bingo-cell { aspect-ratio: 1; }
-    @keyframes pulse-red { 0%, 100% { border-color: #ef4444; box-shadow: 0 0 10px #ef4444; } 50% { border-color: #b91c1c; box-shadow: 0 0 2px #b91c1c; } }
-    .hint-flash { animation: pulse-red 1s infinite; }
+    :root {
+      --bg-dark: #121417;
+      --bg-card: #1a1d21;
+      --border-color: rgba(255, 255, 255, 0.12);
+      --text-main: #f2f4f7;
+      --text-muted: #858d9a;
+      --accent-amber: #ffb000;
+      --accent-blue: #00e5ff;
+      --font-mono: 'Courier New', Courier, monospace;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 24px;
+      background-image: 
+        radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 0);
+      background-size: 24px 24px;
+      overflow-x: hidden;
+    }
+
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 12px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-muted);
+      letter-spacing: 1px;
+    }
+
+    .status-tag {
+      color: var(--accent-amber);
+      background: rgba(255, 176, 0, 0.1);
+      padding: 2px 8px;
+      border: 1px solid rgba(255, 176, 0, 0.3);
+      font-size: 11px;
+    }
+
+    .hero-container {
+      max-width: 680px;
+      margin: 60px auto;
+      width: 100%;
+    }
+
+    .subtitle {
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+      font-size: 13px;
+      letter-spacing: 2px;
+      margin-bottom: 16px;
+      text-transform: uppercase;
+    }
+
+    .title {
+      font-size: 42px;
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -1px;
+      margin-bottom: 32px;
+      text-transform: uppercase;
+    }
+
+    .story-block {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      padding: 28px;
+      position: relative;
+      margin-bottom: 40px;
+    }
+
+    .story-block::before {
+      content: "CLASSIFIED DOSSIER";
+      position: absolute;
+      top: -10px;
+      right: 16px;
+      background: var(--bg-dark);
+      padding: 0 8px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--accent-amber);
+      letter-spacing: 1px;
+    }
+
+    .story-line {
+      font-size: 16px;
+      line-height: 1.8;
+      color: var(--text-main);
+      margin-bottom: 12px;
+      opacity: 0;
+      transform: translateY(8px);
+      animation: fadeIn 0.6s forwards;
+    }
+
+    .story-line:nth-child(1) { animation-delay: 0.2s; }
+    .story-line:nth-child(2) { animation-delay: 0.5s; }
+    .story-line:nth-child(3) { animation-delay: 0.8s; }
+    .story-line:nth-child(4) { animation-delay: 1.1s; }
+
+    .portal-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .portal-btn {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background: #ffffff;
+      color: #000000;
+      text-decoration: none;
+      padding: 16px 20px;
+      font-weight: 700;
+      font-size: 14px;
+      border-radius: 4px;
+      border-bottom: 4px solid #b5b5b5;
+      transition: all 0.15s ease;
+      min-height: 80px;
+    }
+
+    .portal-btn:hover {
+      transform: translateY(-2px);
+      border-bottom-width: 6px;
+      background: #f8f9fa;
+    }
+
+    .portal-btn:active {
+      transform: translateY(2px);
+      border-bottom-width: 2px;
+    }
+
+    .portal-btn .role-tag {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: #666666;
+      font-weight: normal;
+      margin-bottom: 8px;
+    }
+
+    .footer {
+      border-top: 1px solid var(--border-color);
+      padding-top: 16px;
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    @keyframes fadeIn {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
   </style>
 </head>
-<body class="bg-gray-950 text-gray-100 font-sans min-h-screen flex flex-col justify-between p-4">
+<body>
 
-  <header class="flex justify-between items-center border-b border-gray-800 pb-2 mb-4">
-    <div class="flex items-center space-x-2">
-      <span class="text-xs bg-gray-800 px-2 py-1 rounded text-gray-400 font-mono" id="player-pin-display">PIN: ----</span>
-      <span class="text-xs font-bold text-gray-200" id="player-name-display">GUEST</span>
-    </div>
-    <button onclick="toggleClueModal()" class="text-xs bg-yellow-900 text-yellow-200 border border-yellow-700 px-2 py-1 rounded font-bold">
-      📁 CLUES (<span id="clue-count">0</span>/9)
-    </button>
-  </header>
-
-  <main id="main-container" class="flex-1 flex flex-col justify-center">
-
-    <div id="view-onboarding" class="space-y-6">
-      <div class="text-center">
-        <span class="text-xs text-blue-400 font-mono tracking-widest uppercase">CASE FILE INITIALIZATION</span>
-        <h1 class="text-2xl font-black text-white mt-1">GENDER DETECTIVE</h1>
-      </div>
-
-      <div id="reg-form" class="bg-gray-900 p-5 rounded-lg border border-gray-800 space-y-4">
-        <div>
-          <label class="block text-xs font-bold text-gray-400 mb-1">YOUR DETECTIVE ALIAS (NAME)</label>
-          <input type="text" id="reg-name" class="w-full bg-gray-950 border border-gray-700 rounded p-3 text-white focus:outline-none focus:border-blue-500" placeholder="輸入姓名/暱稱">
-        </div>
-        <div>
-          <label class="block text-xs font-bold text-gray-400 mb-1">SELECT FRIEND GROUP</label>
-          <select id="reg-group" class="w-full bg-gray-950 border border-gray-700 rounded p-3 text-white focus:outline-none focus:border-blue-500">
-            </select>
-        </div>
-        <button onclick="registerPlayer()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded tracking-wider uppercase">
-          JOIN INVESTIGATION
-        </button>
-      </div>
-
-      <div class="bg-gray-900 p-4 rounded-lg border border-gray-800 text-center space-y-3">
-        <span class="text-xs text-gray-400 block">EXISTING DETECTIVE?</span>
-        <div class="flex space-x-2">
-          <input type="text" id="login-pin" maxlength="4" placeholder="4-DIGIT PIN" class="w-2/3 bg-gray-950 border border-gray-700 rounded p-2 text-center text-white font-mono">
-          <button onclick="loginWithPin()" class="w-1/3 bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 rounded text-xs">LOGIN</button>
-        </div>
-      </div>
-    </div>
-
-    <div id="view-story" class="hidden bg-gray-900 p-6 rounded-lg border border-gray-800 space-y-4 text-center">
-      <h2 class="text-lg font-bold text-yellow-400 font-mono">MISSION BRIEFING</h2>
-      <p class="text-sm text-gray-300 leading-relaxed text-left">
-        大家而家會化身成為一個偵探，參加呢個派對既目標就係去揭破一個驚天大秘密：『BB 既性別』。係呢個過程入面，你將會受到不同既考驗，鬥智鬥力，最後到達決戰之地，帶住你認為係岩既答案，與共同答案既同伴連成一線，對抗另一隊自認為岩既隊伍。到底係男仔，定係女仔呢？一切一切就等你黎揭曉啦！！！！
-      </p>
-      <div class="text-xs text-gray-500 animate-pulse">Waiting for Host to start Game 1...</div>
-    </div>
-
-    <div id="view-game1" class="hidden space-y-4">
-      <div class="flex justify-between items-center text-xs font-mono text-gray-400">
-        <span id="g1-type-label">GROUP QUIZ</span>
-        <span>SCORE: <span id="g1-score" class="text-yellow-400 font-bold">0</span></span>
-      </div>
-      <div class="bg-gray-900 p-5 rounded-lg border border-gray-800 space-y-4">
-        <h3 id="g1-question-text" class="font-bold text-base text-white">Question Loading...</h3>
-        <div id="g1-options-container" class="space-y-2"></div>
-      </div>
-    </div>
-
-    <div id="view-game2" class="hidden space-y-4">
-      <div class="text-center">
-        <span class="text-xs text-gray-400">CURRENT DRAWN PHRASE</span>
-        <div id="g2-drawn-display" class="text-lg font-black text-yellow-400 bg-gray-900 border border-gray-800 p-2 rounded mt-1">Waiting for Draw...</div>
-      </div>
-      <div id="bingo-board" class="bingo-grid"></div>
-      <div class="text-xs text-center text-gray-500">Line Progress: <span id="bingo-lines-count" class="text-white font-bold">0</span> / 2 Target Lines</div>
-    </div>
-
-    <div id="view-game3" class="hidden space-y-4 text-center">
-      <h2 class="text-lg font-bold text-white">SELECT YOUR BATTLE TEAM</h2>
-      <p class="text-xs text-gray-400">This team is for the physical Switch battle.</p>
-      <div class="grid grid-cols-2 gap-4">
-        <button onclick="selectTeam('BOY')" id="team-btn-boy" class="py-6 rounded-lg font-black text-xl border-2 border-blue-500 text-blue-400 bg-gray-900 hover:bg-blue-950">TEAM BOY ♂</button>
-        <button onclick="selectTeam('GIRL')" id="team-btn-girl" class="py-6 rounded-lg font-black text-xl border-2 border-pink-500 text-pink-400 bg-gray-900 hover:bg-pink-950">TEAM GIRL ♀</button>
-      </div>
-    </div>
-
-    <div id="view-final" class="hidden space-y-4 text-center">
-      <h2 class="text-lg font-bold text-yellow-400 font-mono">FINAL PREDICTION LOCK</h2>
-      <p class="text-xs text-gray-400">Base your absolute final answer on all evidence collected. Unchangeable once submitted!</p>
-      <div id="final-choice-controls" class="grid grid-cols-2 gap-4">
-        <button onclick="submitFinalPrediction('BOY')" class="py-6 rounded-lg font-black text-xl bg-blue-900 hover:bg-blue-800 text-white border border-blue-500">FINAL: BOY ♂</button>
-        <button onclick="submitFinalPrediction('GIRL')" class="py-6 rounded-lg font-black text-xl bg-pink-900 hover:bg-pink-800 text-white border border-pink-500">FINAL: GIRL ♀</button>
-      </div>
-      <div id="final-locked-msg" class="hidden bg-gray-900 border border-green-800 p-4 rounded text-green-400 font-bold text-sm">
-        ✅ PREDICTION LOCKED: <span id="locked-choice-val"></span>
-      </div>
-    </div>
-
-    <div id="view-reveal" class="hidden text-center space-y-4">
-      <h2 class="text-xl font-black text-white tracking-widest">THE TRUTH IS REVEALED</h2>
-      <div id="reveal-waiting" class="text-gray-400 text-sm">Waiting for Host Countdown...</div>
-    </div>
-
-  </main>
-
-  <div id="clue-modal" class="fixed inset-0 bg-gray-950 bg-opacity-95 flex flex-col p-4 hidden z-50">
-    <div class="flex justify-between items-center border-b border-gray-800 pb-3 mb-4">
-      <h3 class="font-bold text-yellow-400 font-mono">EVIDENCE ARCHIVE</h3>
-      <button onclick="toggleClueModal()" class="text-gray-400 hover:text-white font-bold text-lg">✕</button>
-    </div>
-    <div id="clue-modal-list" class="flex-1 overflow-y-auto space-y-4"></div>
+  <div class="top-bar">
+    <span>CASE #2026-GR</span>
+    <span class="status-tag">SYSTEM READY</span>
   </div>
 
-  <script>
-    firebase.initializeApp(window.CONFIG.firebase);
-    const db = firebase.database();
+  <div class="hero-container">
+    <div class="subtitle">// INVESTIGATION INITIATED</div>
+    <h1 class="title">THE CASE:<br>ONE SECRET. TWO POSSIBILITIES.</h1>
 
-    let currentPlayer = null;
-    let playerId = localStorage.getItem('gr_player_id');
-    let playerPin = localStorage.getItem('gr_player_pin');
-    let currentPhase = "ONBOARDING";
-    let groupQuestions = [];
-    let commonQuestions = [];
-    let currentGroupQIdx = 0;
+    <div class="story-block">
+      <p class="story-line">Something is about to change.</p>
+      <p class="story-line">An encrypted truth lies hidden within the clues.</p>
+      <p class="story-line">Seven groups. Nine pieces of evidence.</p>
+      <p class="story-line" style="color: var(--accent-amber); font-weight: bold; margin-bottom: 0;">YOUR MISSION: FIND THE TRUTH.</p>
+    </div>
 
-    // Init Group Selector
-    const groupSelect = document.getElementById('reg-group');
-    window.CONFIG.groupIds.forEach(gid => {
-      const opt = document.createElement('option');
-      opt.value = gid;
-      opt.innerText = window.CONFIG.groups[gid];
-      groupSelect.appendChild(opt);
-    });
+    <div class="subtitle" style="margin-top: 40px;">// SELECT TERMINAL ACCESS</div>
+    
+    <div class="portal-grid">
+      <a href="player.html" class="portal-btn">
+        <span class="role-tag">ACCESS 01</span>
+        <span>PLAYER MOBILE UI</span>
+      </a>
+      <a href="display.html" class="portal-btn">
+        <span class="role-tag">ACCESS 02</span>
+        <span>MAIN DISPLAY SCREEN</span>
+      </a>
+      <a href="host.html" class="portal-btn">
+        <span class="role-tag">ACCESS 03</span>
+        <span>HOST CONTROL</span>
+      </a>
+      <a href="admin.html" class="portal-btn">
+        <span class="role-tag">ACCESS 04</span>
+        <span>ADMIN CONSOLE</span>
+      </a>
+      <a href="secret.html" class="portal-btn">
+        <span class="role-tag">ACCESS 05</span>
+        <span>SECRET DASHBOARD</span>
+      </a>
+    </div>
+  </div>
 
-    // Auto Login Check
-    if (playerId && playerPin) {
-      db.ref(`players/${playerId}`).once('value', snap => {
-        if (snap.exists() && snap.val().pin === playerPin) {
-          bindPlayer(playerId, snap.val());
-        }
-      });
-    }
+  <div class="footer">
+    <span>CONFIDENTIAL / INTERNAL USE ONLY</span>
+    <span>VISUAL SYSTEM v2.0</span>
+  </div>
 
-    // Global Listener
-    db.ref('game_state').on('value', snap => {
-      const gs = snap.val() || {};
-      currentPhase = gs.current_phase || "ONBOARDING";
-      renderPhaseView(gs);
-    });
-
-    function registerPlayer() {
-      const name = document.getElementById('reg-name').value.trim();
-      const group = document.getElementById('reg-group').value;
-      if (!name) return alert("Please enter your name!");
-
-      db.ref('players').once('value', snap => {
-        const players = snap.val() || {};
-        const pin = window.GenderRevealUtils.generatePin(players);
-        const newRef = db.ref('players').push();
-        
-        const newPlayerData = {
-          pin: pin,
-          name: name,
-          group: group,
-          score: 0,
-          bingo_board: [],
-          bingo_lines: 0,
-          bingo_completed_at: null,
-          team: null,
-          final_prediction: null,
-          unlocked_clues: []
-        };
-
-        newRef.set(newPlayerData).then(() => {
-          localStorage.setItem('gr_player_id', newRef.key);
-          localStorage.setItem('gr_player_pin', pin);
-          bindPlayer(newRef.key, newPlayerData);
-        });
-      });
-    }
-
-    function loginWithPin() {
-      const pinInput = document.getElementById('login-pin').value.trim();
-      if (!pinInput) return;
-
-      db.ref('players').once('value', snap => {
-        const players = snap.val() || {};
-        let foundId = null;
-        Object.keys(players).forEach(id => {
-          if (players[id].pin === pinInput) foundId = id;
-        });
-
-        if (foundId) {
-          localStorage.setItem('gr_player_id', foundId);
-          localStorage.setItem('gr_player_pin', pinInput);
-          bindPlayer(foundId, players[foundId]);
-        } else {
-          alert("PIN not found!");
-        }
-      });
-    }
-
-    function bindPlayer(id, data) {
-      playerId = id;
-      currentPlayer = data;
-      document.getElementById('player-pin-display').innerText = `PIN: ${data.pin}`;
-      document.getElementById('player-name-display').innerText = data.name.toUpperCase();
-
-      db.ref(`players/${id}`).on('value', snap => {
-        if (snap.exists()) {
-          currentPlayer = snap.val();
-          document.getElementById('clue-count').innerText = (currentPlayer.unlocked_clues || []).length;
-          document.getElementById('g1-score').innerText = currentPlayer.score || 0;
-          renderClueModal();
-        }
-      });
-    }
-
-    function renderPhaseView(gs) {
-      document.querySelectorAll('#main-container > div').forEach(el => el.classList.add('hidden'));
-
-      if (!currentPlayer) {
-        document.getElementById('view-onboarding').classList.remove('hidden');
-        return;
-      }
-
-      switch(currentPhase) {
-        case 'ONBOARDING':
-          document.getElementById('view-onboarding').classList.remove('hidden');
-          break;
-        case 'BACKGROUND_STORY':
-          document.getElementById('view-story').classList.remove('hidden');
-          break;
-        case 'GAME1_QUIZ':
-          document.getElementById('view-game1').classList.remove('hidden');
-          loadAndRenderGame1(gs);
-          break;
-        case 'GAME2_BINGO':
-          document.getElementById('view-game2').classList.remove('hidden');
-          initOrRenderBingo(gs);
-          break;
-        case 'GAME3_TEAM_SELECT':
-          document.getElementById('view-game3').classList.remove('hidden');
-          break;
-        case 'FINAL_CHOICE':
-          document.getElementById('view-final').classList.remove('hidden');
-          renderFinalChoiceView();
-          break;
-        case 'GRAND_REVEAL':
-          document.getElementById('view-reveal').classList.remove('hidden');
-          break;
-        default:
-          document.getElementById('view-story').classList.remove('hidden');
-      }
-    }
-
-    // --- GAME 1 PLAYER LOGIC ---
-    function loadAndRenderGame1(gs) {
-      if (groupQuestions.length === 0) {
-        db.ref(`questions/group_quiz/${currentPlayer.group}`).once('value', snap => {
-          groupQuestions = snap.val() || [];
-          renderCurrentQuiz(gs);
-        });
-      } else {
-        renderCurrentQuiz(gs);
-      }
-    }
-
-    function renderCurrentQuiz(gs) {
-      const container = document.getElementById('g1-options-container');
-      const qText = document.getElementById('g1-question-text');
-      const label = document.getElementById('g1-type-label');
-
-      if (currentGroupQIdx < 3) {
-        // Group Quiz Step
-        label.innerText = `GROUP QUIZ (${currentGroupQIdx+1}/3)`;
-        const q = groupQuestions[currentGroupQIdx];
-        if (!q) { qText.innerText = "Waiting for question..."; return; }
-        qText.innerText = q.q;
-        container.innerHTML = '';
-        q.options.forEach((opt, idx) => {
-          const btn = document.createElement('button');
-          btn.className = "w-full bg-gray-950 border border-gray-700 hover:border-blue-500 rounded p-3 text-left text-sm text-white";
-          btn.innerText = `${String.fromCharCode(65+idx)}. ${opt}`;
-          btn.onclick = () => submitGroupAnswer(idx, q.answer);
-          container.appendChild(btn);
-        });
-      } else {
-        // Common Quiz Step
-        label.innerText = `COMMON QUIZ (${(gs.current_question_index||0) + 1}/5)`;
-        db.ref('questions/common_quiz').once('value', snap => {
-          commonQuestions = snap.val() || [];
-          const q = commonQuestions[gs.current_question_index || 0];
-          if (!q) return;
-          qText.innerText = q.q;
-          container.innerHTML = '';
-          q.options.forEach((opt, idx) => {
-            const btn = document.createElement('button');
-            btn.className = "w-full bg-gray-950 border border-gray-700 hover:border-yellow-500 rounded p-3 text-left text-sm text-white";
-            btn.innerText = `${String.fromCharCode(65+idx)}. ${opt}`;
-            btn.onclick = () => submitCommonAnswer(idx, q.answer);
-            container.appendChild(btn);
-          });
-        });
-      }
-    }
-
-    function submitGroupAnswer(selected, correct) {
-      if (selected === correct) {
-        db.ref(`players/${playerId}/score`).set((currentPlayer.score || 0) + 1000);
-      }
-      currentGroupQIdx++;
-      db.ref('game_state').once('value', snap => renderCurrentQuiz(snap.val()));
-    }
-
-    function submitCommonAnswer(selected, correct) {
-      if (selected === correct) {
-        // 1000 + remaining * 33.3 (Simplified speed score addition)
-        const addScore = 1000 + 333;
-        db.ref(`players/${playerId}/score`).set((currentPlayer.score || 0) + addScore);
-      }
-      alert("Answer Submitted!");
-    }
-
-    // --- GAME 2 BINGO LOGIC ---
-    function initOrRenderBingo(gs) {
-      const currentPhrase = gs.current_bingo_phrase || "";
-      document.getElementById('g2-drawn-display').innerText = currentPhrase || "Waiting for Draw...";
-
-      if (!currentPlayer.bingo_board || currentPlayer.bingo_board.length === 0) {
-        db.ref('bingo_phrases').once('value', snap => {
-          const pool = snap.val() || [];
-          const shuffled = pool.sort(() => 0.5 - Math.random());
-          const board = shuffled.slice(0, 9).map(p => ({ phrase: p, marked: false }));
-          db.ref(`players/${playerId}/bingo_board`).set(board);
-        });
-        return;
-      }
-
-      const grid = document.getElementById('bingo-board');
-      grid.innerHTML = '';
-      currentPlayer.bingo_board.forEach((cell, idx) => {
-        const btn = document.createElement('button');
-        const isHint = !cell.marked && cell.phrase === currentPhrase;
-        btn.className = `bingo-cell p-2 border rounded font-bold text-xs flex justify-center items-center text-center ${cell.marked ? 'bg-red-900 border-red-600 text-white' : 'bg-gray-900 border-gray-700 text-gray-300'} ${isHint ? 'hint-flash' : ''}`;
-        btn.innerText = cell.phrase;
-        btn.onclick = () => markBingoCell(idx, cell, currentPhrase, gs);
-        grid.appendChild(btn);
-      });
-
-      document.getElementById('bingo-lines-count').innerText = currentPlayer.bingo_lines || 0;
-    }
-
-    function markBingoCell(index, cell, currentPhrase, gs) {
-      if (cell.marked) return;
-      const drawnHistory = gs.drawn_bingo_phrases || [];
-      if (!drawnHistory.includes(cell.phrase)) {
-        alert("This phrase has not been drawn yet!");
-        return;
-      }
-
-      const updatedBoard = currentPlayer.bingo_board.slice();
-      updatedBoard[index].marked = true;
-
-      // Calculate lines
-      const lines = checkBingoLines(updatedBoard);
-
-      const updates = {};
-      updates[`players/${playerId}/bingo_board`] = updatedBoard;
-      updates[`players/${playerId}/bingo_lines`] = lines;
-
-      if (lines >= 2 && !currentPlayer.bingo_completed_at) {
-        updates[`players/${playerId}/bingo_completed_at`] = firebase.database.ServerValue.TIMESTAMP;
-      }
-
-      db.ref().update(updates);
-    }
-
-    function checkBingoLines(board) {
-      const m = board.map(b => b.marked);
-      let lines = 0;
-      // Rows
-      if (m[0] && m[1] && m[2]) lines++;
-      if (m[3] && m[4] && m[5]) lines++;
-      if (m[6] && m[7] && m[8]) lines++;
-      // Cols
-      if (m[0] && m[3] && m[6]) lines++;
-      if (m[1] && m[4] && m[7]) lines++;
-      if (m[2] && m[5] && m[8]) lines++;
-      // Diag
-      if (m[0] && m[4] && m[8]) lines++;
-      if (m[2] && m[4] && m[6]) lines++;
-      return lines;
-    }
-
-    // --- GAME 3 LOGIC ---
-    function selectTeam(team) {
-      db.ref(`players/${playerId}/team`).set(team).then(() => {
-        document.getElementById('team-btn-boy').className = team === 'BOY' ? 'py-6 rounded-lg font-black text-xl border-4 border-blue-400 text-white bg-blue-900' : 'py-6 rounded-lg font-black text-xl border-2 border-blue-500 text-blue-400 bg-gray-900';
-        document.getElementById('team-btn-girl').className = team === 'GIRL' ? 'py-6 rounded-lg font-black text-xl border-4 border-pink-400 text-white bg-pink-900' : 'py-6 rounded-lg font-black text-xl border-2 border-pink-500 text-pink-400 bg-gray-900';
-      });
-    }
-
-    // --- FINAL CHOICE LOGIC ---
-    function renderFinalChoiceView() {
-      if (currentPlayer.final_prediction) {
-        document.getElementById('final-choice-controls').classList.add('hidden');
-        document.getElementById('final-locked-msg').classList.remove('hidden');
-        document.getElementById('locked-choice-val').innerText = currentPlayer.final_prediction;
-      }
-    }
-
-    function submitFinalPrediction(pred) {
-      if (confirm(`Confirm your final choice as ${pred}? This cannot be changed!`)) {
-        db.ref(`players/${playerId}/final_prediction`).set(pred);
-      }
-    }
-
-    // --- CLUE MODAL RENDER ---
-    function toggleClueModal() {
-      document.getElementById('clue-modal').classList.toggle('hidden');
-    }
-
-    function renderClueModal() {
-      db.ref('clues').once('value', snap => {
-        const allClues = snap.val() || {};
-        const unlocked = currentPlayer.unlocked_clues || [];
-        const container = document.getElementById('clue-modal-list');
-        container.innerHTML = '';
-
-        ['level1', 'level2', 'level3'].forEach((lvl, idx) => {
-          const lvlDiv = document.createElement('div');
-          lvlDiv.innerHTML = `<h4 class="text-xs font-bold text-yellow-500 mb-2">LEVEL ${idx+1} EVIDENCE</h4>`;
-          const pool = allClues[lvl] || [];
-          pool.forEach((c, cIdx) => {
-            const cid = `${lvl}_${cIdx+1}`;
-            const isUnlocked = unlocked.includes(cid);
-            const card = document.createElement('div');
-            card.className = `p-3 rounded border text-xs mb-2 ${isUnlocked ? 'bg-gray-900 border-yellow-600 text-white' : 'bg-gray-950 border-gray-800 text-gray-600'}`;
-            if (isUnlocked) {
-              card.innerHTML = c.type === 'image' ? `<img src="${c.content}" class="w-full h-32 object-cover rounded">` : `<p>${c.content}</p>`;
-            } else {
-              card.innerHTML = `<span class="font-mono">🔒 CLASSIFIED EVIDENCE</span>`;
-            }
-            lvlDiv.appendChild(card);
-          });
-          container.appendChild(lvlDiv);
-        });
-      });
-    }
-  </script>
 </body>
 </html>
