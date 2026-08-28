@@ -39,6 +39,17 @@
             background-color: #0d0d0d;
             color: #f8f8f8;
             min-height: 100vh;
+            transition: background 0.8s ease, color 0.8s ease;
+        }
+
+        body.reveal-boy {
+            background: radial-gradient(circle at 50% 35%, #B5D4FF 0%, #A0C4FF 55%, #82ACEE 100%);
+            color: #17325c;
+        }
+
+        body.reveal-girl {
+            background: radial-gradient(circle at 50% 35%, #FFC2C2 0%, #FFADAD 55%, #FF9494 100%);
+            color: #651f35;
         }
         
         .font-mono {
@@ -1087,6 +1098,10 @@
         }
         
         function updateGameScreen() {
+            if (currentPhase !== 'GRAND_REVEAL') {
+                document.body.classList.remove('reveal-boy', 'reveal-girl');
+            }
+
             // Hide all game screens
             document.querySelectorAll('#game-screens > div').forEach(screen => {
                 screen.classList.add('hidden');
@@ -1932,6 +1947,7 @@
                 revealCountdown.classList.add('hidden');
                 revealResult.classList.add('hidden');
                 revealWaiting.classList.remove('hidden');
+                document.body.classList.remove('reveal-boy', 'reveal-girl');
                 return;
             }
             
@@ -1980,7 +1996,10 @@
         
         function showRevealResult() {
             database.ref(window.CONFIG.dbPaths.secretGender).once('value', (snapshot) => {
+                if (currentPhase !== 'GRAND_REVEAL') return;
                 const secretGender = snapshot.val();
+                document.body.classList.remove('reveal-boy', 'reveal-girl');
+                document.body.classList.add(secretGender === 'BOY' ? 'reveal-boy' : 'reveal-girl');
                 
                 revealGender.textContent = secretGender === 'BOY' ? '👦 BOY!' : '👧 GIRL!';
                 revealGender.className = `text-6xl font-bold mb-6 ${secretGender === 'BOY' ? 'text-blue-500' : 'text-pink-500'}`;
