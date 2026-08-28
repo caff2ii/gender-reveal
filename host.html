@@ -322,9 +322,10 @@
                 <!-- Game-Specific Controls -->
                 <div id="game1-controls" class="game-controls panel mb-8">
                     <div class="panel-header">GAME 1: QUIZ CONTROL</div>
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-3 gap-4">
                         <button id="next-quiz-step-btn" class="control-btn">NEXT QUIZ STEP</button>
                         <button id="start-countdown-btn" class="control-btn">START COUNTDOWN</button>
+                        <button id="reveal-answer-btn" class="control-btn">REVEAL ANSWER</button>
                     </div>
                     <div class="mt-4 text-sm text-gray-400">
                         <div>Question: <span id="quiz-question-num" class="text-white">0</span> / 8</div>
@@ -421,6 +422,7 @@
         
         const nextQuizStepBtn = document.getElementById('next-quiz-step-btn');
         const startCountdownBtn = document.getElementById('start-countdown-btn');
+        const revealAnswerBtn = document.getElementById('reveal-answer-btn');
         const quizQuestionNum = document.getElementById('quiz-question-num');
         const quizStage = document.getElementById('quiz-stage');
         const quizDoneCount = document.getElementById('quiz-done-count');
@@ -593,8 +595,40 @@
             const doneCount = playerIds.filter(id => players[id].group_quiz_done === true).length;
             quizDoneCount.textContent = playerIds.length > 0 ? `${doneCount} / ${playerIds.length}` : '-';
             
-            // During the group stage players answer on their own, so this button force-starts the common quiz
-            nextQuizStepBtn.textContent = (gameState.game1_stage || 'GROUP') === 'GROUP' ? 'FORCE START COMMON QUIZ' : 'NEXT QUIZ STEP';
+            const isGroup = (gameState.game1_stage || 'GROUP') === 'GROUP';
+            const revealStage = gameState.common_reveal_stage || 0;
+            const questionIndex = gameState.current_question_index || 0;
+            const isLastQuestion = questionIndex >= window.CONFIG.game1.commonQuizCount - 1;
+            
+            if (isGroup) {
+                // Players answer their own group questions on their own - this button force-starts the common quiz
+                nextQuizStepBtn.textContent = 'FORCE START COMMON QUIZ';
+                nextQuizStepBtn.disabled = false;
+                startCountdownBtn.disabled = true;
+                revealAnswerBtn.disabled = true;
+                return;
+            }
+            
+            // COMMON stage - guide the host through the 3-step flow:
+            // step 0: question shown -> START COUNTDOWN available
+            // step 1: countdown running (players answering) -> REVEAL ANSWER available
+            // step 2: answer revealed -> NEXT QUIZ STEP available
+            if (revealStage === 0) {
+                nextQuizStepBtn.textContent = isLastQuestion ? 'GO TO SETTLEMENT' : 'NEXT QUIZ STEP';
+                nextQuizStepBtn.disabled = true;
+                startCountdownBtn.disabled = false;
+                revealAnswerBtn.disabled = true;
+            } else if (revealStage === 1) {
+                nextQuizStepBtn.textContent = isLastQuestion ? 'GO TO SETTLEMENT' : 'NEXT QUIZ STEP';
+                nextQuizStepBtn.disabled = true;
+                startCountdownBtn.disabled = true;
+                revealAnswerBtn.disabled = false;
+            } else {
+                nextQuizStepBtn.textContent = isLastQuestion ? 'GO TO SETTLEMENT' : 'NEXT QUIZ STEP';
+                nextQuizStepBtn.disabled = false;
+                startCountdownBtn.disabled = true;
+                revealAnswerBtn.disabled = true;
+            }
         }
         
         function updateGame2UI() {
@@ -653,6 +687,10 @@
             
             startCountdownBtn.addEventListener('click', () => {
                 startQuizCountdown();
+            });
+            
+            revealAnswerBtn.addEventListener('click', () => {
+                revealQuizAnswer();
             });
             
             // Game 2 controls
@@ -746,16 +784,24 @@
         }
         
         function startQuizCountdown() {
-            // Advance the reveal stage: 0 = question only, 1 = answers + countdown, 2 = reveal correct answer
+            // Step 0 -> 1: reveal the options and start the countdown
             const currentRevealStage = gameState.common_reveal_stage || 0;
-            const updates = {
-                common_reveal_stage: currentRevealStage + 1
-            };
-            if (currentRevealStage === 0) {
-                // Record when the countdown started so player devices stay in sync
-                updates.countdown_started_at = firebase.database.ServerValue.TIMESTAMP;
-            }
-            database.ref(window.CONFIG.dbPaths.gameState).update(updates);
+            if (currentRevealStage !== 0) return;
+            
+            database.ref(window.CONFIG.dbPaths.gameState).update({
+                common_reveal_stage: 1,
+                countdown_started_at: firebase.database.ServerValue.TIMESTAMP
+            });
+        }
+        
+        function revealQuizAnswer() {
+            // Step 1 -> 2: reveal the correct answer to everyone
+            const currentRevealStage = gameState.common_reveal_stage || 0;
+            if (currentRevealStage !== 1) return;
+            
+            database.ref(window.CONFIG.dbPaths.gameState).update({
+                common_reveal_stage: 2
+            });
         }
         
         function drawNextBingoPhrase() {

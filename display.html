@@ -795,6 +795,8 @@
             });
         }
         
+        let quizCountdownTimer = null;
+        
         function updateCommonQuizDisplay() {
             const questionIndex = gameState.current_question_index || 0;
             const revealStage = gameState.common_reveal_stage || 0;
@@ -813,25 +815,17 @@
                 // Reset display
                 quizAnswerReveal.classList.add('hidden');
                 quizCountdown.classList.add('hidden');
+                if (quizCountdownTimer) {
+                    clearInterval(quizCountdownTimer);
+                    quizCountdownTimer = null;
+                }
                 
                 if (revealStage === 0) {
-                    // Show question only
+                    // Show question only - options are not revealed yet
                     quizQuestion.textContent = question.q;
                     quizOptions.innerHTML = '';
-                } else if (revealStage <= 4) {
-                    // Show options one by one
-                    quizQuestion.textContent = question.q;
-                    quizOptions.innerHTML = '';
-                    
-                    const labels = ['A', 'B', 'C', 'D'];
-                    for (let i = 0; i < revealStage; i++) {
-                        const option = document.createElement('div');
-                        option.className = 'quiz-option';
-                        option.textContent = `${labels[i]}. ${window.GenderRevealUtils.escapeHtml(question.options[i])}`;
-                        quizOptions.appendChild(option);
-                    }
-                } else if (revealStage === 5) {
-                    // Show countdown
+                } else if (revealStage === 1) {
+                    // Countdown is running - show all options and the countdown (players answering)
                     quizQuestion.textContent = question.q;
                     quizOptions.innerHTML = '';
                     
@@ -846,7 +840,7 @@
                     quizCountdown.classList.remove('hidden');
                     startQuizCountdown();
                 } else {
-                    // Show answer
+                    // Answer revealed - highlight correct/wrong
                     quizQuestion.textContent = question.q;
                     quizOptions.innerHTML = '';
                     
@@ -859,7 +853,6 @@
                         quizOptions.appendChild(optionDiv);
                     });
                     
-                    quizCountdown.classList.add('hidden');
                     quizAnswerReveal.classList.remove('hidden');
                     correctAnswer.textContent = labels[question.answer];
                 }
@@ -867,18 +860,24 @@
         }
         
         function startQuizCountdown() {
-            let timeLeft = 15;
+            // Sync with the host: count down from when the host started the countdown,
+            // so the TV and player devices all show the same remaining time
             const quizCountdown = document.getElementById('quiz-countdown');
-            quizCountdown.textContent = timeLeft;
+            const startedAt = gameState.countdown_started_at || Date.now();
+            const duration = window.CONFIG.game1.commonQuizTimeout;
             
-            const timer = setInterval(() => {
-                timeLeft--;
-                quizCountdown.textContent = timeLeft;
-                
-                if (timeLeft <= 0) {
-                    clearInterval(timer);
+            const tick = () => {
+                const elapsed = (Date.now() - startedAt) / 1000;
+                const remaining = Math.max(0, Math.ceil(duration - elapsed));
+                quizCountdown.textContent = remaining;
+                if (remaining <= 0 && quizCountdownTimer) {
+                    clearInterval(quizCountdownTimer);
+                    quizCountdownTimer = null;
                 }
-            }, 1000);
+            };
+            
+            tick();
+            quizCountdownTimer = setInterval(tick, 250);
         }
         
         function updateGame1Settlement() {
