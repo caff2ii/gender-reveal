@@ -610,6 +610,7 @@
         
         // State
         let currentPlayer = null;
+        let currentPlayerRef = null;
         let currentPhase = 'ONBOARDING';
         let gameState = {};
         let questions = {};
@@ -708,6 +709,7 @@
                     if (snapshot.exists()) {
                         currentPlayer = { id: currentPlayer.id, ...snapshot.val() };
                         localStorage.setItem(window.CONFIG.player.localStorageKey, JSON.stringify(currentPlayer));
+                        subscribeToCurrentPlayer();
                         showGameScreens();
                     } else {
                         localStorage.removeItem(window.CONFIG.player.localStorageKey);
@@ -721,6 +723,38 @@
             } else {
                 showOnboarding();
             }
+        }
+
+        // Keep the device's player record current. Rewards are assigned by the
+        // host after a game settles, so relying on the login-time snapshot left
+        // the evidence library showing every clue as locked until a refresh.
+        function subscribeToCurrentPlayer() {
+            if (!currentPlayer || !currentPlayer.id) return;
+
+            if (currentPlayerRef) {
+                currentPlayerRef.off();
+            }
+
+            currentPlayerRef = database.ref(`${window.CONFIG.dbPaths.players}/${currentPlayer.id}`);
+            currentPlayerRef.on('value', (snapshot) => {
+                if (!snapshot.exists()) return;
+
+                currentPlayer = { id: currentPlayer.id, ...snapshot.val() };
+                try {
+                    localStorage.setItem(window.CONFIG.player.localStorageKey, JSON.stringify(currentPlayer));
+                } catch (error) {
+                    console.warn('Could not update player session locally:', error);
+                }
+
+                // Host reward writes can arrive just after the phase change.
+                // Refresh settlement screens and an open evidence library when
+                // the player's unlocked_clues value is updated.
+                if (currentPhase === 'GAME1_SETTLE') showGame1Settlement();
+                if (currentPhase === 'GAME2_SETTLE') showGame2Settlement();
+                if (!clueLibraryScreen.classList.contains('hidden')) updateClueLibrary();
+            }, (error) => {
+                console.warn('Player listener error:', error);
+            });
         }
         
         function showOnboarding() {
@@ -961,13 +995,19 @@
                     console.warn('Could not save player session locally:', e);
                 }
                 showGameScreens();
-                
+
                 // Surface real write failures (e.g. permission denied) afterwards
-                newPlayerRef.set(playerData).catch((error) => {
+                const savePlayer = newPlayerRef.set(playerData);
+                subscribeToCurrentPlayer();
+                savePlayer.catch((error) => {
                     console.error('Saving player to Firebase failed:', error);
                     alert('Your registration could not be saved: ' + (error && error.message ? error.message : 'connection problem') + '. Please try again.');
                     // Roll back the local session so the player can retry
                     try { localStorage.removeItem(window.CONFIG.player.localStorageKey); } catch (e2) {}
+                    if (currentPlayerRef) {
+                        currentPlayerRef.off();
+                        currentPlayerRef = null;
+                    }
                     currentPlayer = null;
                     showOnboarding();
                 });
@@ -1015,6 +1055,7 @@
                     const playerData = Object.entries(snapshot.val())[0];
                     currentPlayer = { id: playerData[0], ...playerData[1] };
                     localStorage.setItem(window.CONFIG.player.localStorageKey, JSON.stringify(currentPlayer));
+                    subscribeToCurrentPlayer();
                     showGameScreens();
                 } else {
                     alert('PIN not found. Please check and try again.');
