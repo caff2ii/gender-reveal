@@ -1199,6 +1199,7 @@
                 // Reset display
                 quizAnswerReveal.classList.add('hidden');
                 quizCountdown.classList.add('hidden');
+                quizCountdown.textContent = '';
                 if (quizCountdownTimer) {
                     clearInterval(quizCountdownTimer);
                     quizCountdownTimer = null;
@@ -1229,7 +1230,6 @@
                         quizOptions.appendChild(optionDiv);
                     });
                     
-                    quizCountdown.classList.remove('hidden');
                     startQuizCountdown();
                 } else {
                     // Answer revealed - highlight correct/wrong
