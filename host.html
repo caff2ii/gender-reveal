@@ -322,10 +322,11 @@
                 <!-- Game-Specific Controls -->
                 <div id="game1-controls" class="game-controls panel mb-8">
                     <div class="panel-header">GAME 1: QUIZ CONTROL</div>
-                    <div class="grid grid-cols-3 gap-4">
-                        <button id="next-quiz-step-btn" class="control-btn">NEXT QUIZ STEP</button>
-                        <button id="start-countdown-btn" class="control-btn">START COUNTDOWN</button>
-                        <button id="reveal-answer-btn" class="control-btn">REVEAL ANSWER</button>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                        <button id="prev-quiz-step-btn" class="control-btn">◀ 上一題</button>
+                        <button id="next-quiz-step-btn" class="control-btn">下一題 ▶</button>
+                        <button id="show-options-btn" class="control-btn">顯示選項</button>
+                        <button id="reveal-answer-btn" class="control-btn">開估</button>
                     </div>
                     <div class="mt-4 text-sm text-gray-400">
                         <div>Question: <span id="quiz-question-num" class="text-white">0</span> / 8</div>
@@ -421,7 +422,8 @@
         const revealControls = document.getElementById('reveal-controls');
         
         const nextQuizStepBtn = document.getElementById('next-quiz-step-btn');
-        const startCountdownBtn = document.getElementById('start-countdown-btn');
+        const prevQuizStepBtn = document.getElementById('prev-quiz-step-btn');
+        const showOptionsBtn = document.getElementById('show-options-btn');
         const revealAnswerBtn = document.getElementById('reveal-answer-btn');
         const quizQuestionNum = document.getElementById('quiz-question-num');
         const quizStage = document.getElementById('quiz-stage');
@@ -487,7 +489,37 @@
                 };
                 currentPhase = gameState.current_phase || 'ONBOARDING';
                 updateUI();
+                watchQuizCountdownForAutoReveal();
             });
+        }
+        
+        // When the common quiz countdown is running, automatically reveal the answer
+        // once time is up instead of requiring the host to click 開估 manually.
+        let quizAutoRevealTimer = null;
+        
+        function watchQuizCountdownForAutoReveal() {
+            if (quizAutoRevealTimer) {
+                clearInterval(quizAutoRevealTimer);
+                quizAutoRevealTimer = null;
+            }
+            
+            const isCommonCountdownRunning = currentPhase === 'GAME1_QUIZ'
+                && (gameState.game1_stage || 'GROUP') === 'COMMON'
+                && (gameState.common_reveal_stage || 0) === 1
+                && gameState.countdown_started_at;
+            
+            if (!isCommonCountdownRunning) return;
+            
+            const duration = window.CONFIG.game1.commonQuizTimeout;
+            
+            quizAutoRevealTimer = setInterval(() => {
+                const elapsed = (Date.now() - gameState.countdown_started_at) / 1000;
+                if (elapsed >= duration) {
+                    clearInterval(quizAutoRevealTimer);
+                    quizAutoRevealTimer = null;
+                    revealQuizAnswer();
+                }
+            }, 250);
         }
         
         function setupPlayersListener() {
@@ -604,16 +636,18 @@
                 // Players answer their own group questions on their own - this button force-starts the common quiz
                 nextQuizStepBtn.textContent = 'FORCE START COMMON QUIZ';
                 nextQuizStepBtn.disabled = false;
-                startCountdownBtn.disabled = true;
+                prevQuizStepBtn.disabled = true;
+                showOptionsBtn.disabled = true;
                 revealAnswerBtn.disabled = true;
                 return;
             }
             
-            // COMMON stage - all three controls are always enabled (live host controls).
+            // COMMON stage - all controls are always enabled (live host controls).
             // The handlers are stage-aware, so pressing them at any moment is safe.
-            nextQuizStepBtn.textContent = isLastQuestion ? 'GO TO SETTLEMENT' : 'NEXT QUIZ STEP';
+            nextQuizStepBtn.textContent = isLastQuestion ? 'GO TO SETTLEMENT' : '下一題 ▶';
             nextQuizStepBtn.disabled = false;
-            startCountdownBtn.disabled = false;
+            prevQuizStepBtn.disabled = questionIndex <= 0;
+            showOptionsBtn.disabled = false;
             revealAnswerBtn.disabled = false;
         }
         
@@ -671,7 +705,11 @@
                 advanceQuizStep();
             });
             
-            startCountdownBtn.addEventListener('click', () => {
+            prevQuizStepBtn.addEventListener('click', () => {
+                goToPreviousQuizStep();
+            });
+            
+            showOptionsBtn.addEventListener('click', () => {
                 startQuizCountdown();
             });
             
@@ -750,17 +788,30 @@
             const currentIndex = gameState.current_question_index || 0;
             
             // Common quiz
-            if (currentIndex >= 4) {
+            if (currentIndex >= window.CONFIG.game1.commonQuizCount - 1) {
                 // Quiz complete, move to settlement
                 advanceToPhase('GAME1_SETTLE');
             } else {
                 // Next common question - reset the reveal stage so the question
-                // is shown first (answers and countdown come with START COUNTDOWN)
+                // is shown first (options/countdown come with the 顯示選項 button)
                 database.ref(window.CONFIG.dbPaths.gameState).update({
                     current_question_index: currentIndex + 1,
                     common_reveal_stage: 0
                 });
             }
+        }
+        
+        function goToPreviousQuizStep() {
+            // Only meaningful once in the common quiz - the group quiz is self-paced per player
+            if ((gameState.game1_stage || 'GROUP') !== 'COMMON') return;
+            
+            const currentIndex = gameState.current_question_index || 0;
+            if (currentIndex <= 0) return;
+            
+            database.ref(window.CONFIG.dbPaths.gameState).update({
+                current_question_index: currentIndex - 1,
+                common_reveal_stage: 0
+            });
         }
         
         function checkGroupQuizCompletion() {

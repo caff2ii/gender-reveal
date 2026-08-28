@@ -247,6 +247,20 @@
             transition: all 0.3s ease;
         }
         
+        /* Quiz answer buttons: only apply the hover style for real mouse pointers -
+           on touch devices, a tapped button's :hover can otherwise get "stuck"
+           and reappear on the freshly-created button at the same position/index
+           for the next question. */
+        .quiz-option-btn {
+            background: #1f2937;
+        }
+        
+        @media (hover: hover) and (pointer: fine) {
+            .quiz-option-btn:hover:not(:disabled) {
+                background: #374151;
+            }
+        }
+        
         .bingo-cell.highlight {
             border-color: #f97316;
             box-shadow: 0 0 10px rgba(249, 115, 22, 0.5);
@@ -1328,7 +1342,7 @@
             const labels = ['A', 'B', 'C', 'D'];
             question.options.forEach((option, index) => {
                 const btn = document.createElement('button');
-                btn.className = 'w-full p-4 bg-gray-800 hover:bg-gray-700 rounded-lg text-left transition-colors';
+                btn.className = 'quiz-option-btn w-full p-4 rounded-lg text-left transition-colors';
                 btn.innerHTML = `<span class="font-mono text-orange-500 mr-2">${labels[index]}.</span> ${window.GenderRevealUtils.escapeHtml(option)}`;
                 btn.addEventListener('click', () => submitAnswer(question, index, stage));
                 quizOptions.appendChild(btn);
@@ -1366,6 +1380,12 @@
                 btn.disabled = true;
                 btn.classList.add('opacity-50');
             });
+            
+            // Drop focus so a tapped button doesn't keep a lingering focus/hover
+            // ring that would otherwise carry over to the next question's options
+            if (document.activeElement && document.activeElement.blur) {
+                document.activeElement.blur();
+            }
             
             quizScore.textContent = newScore;
             
