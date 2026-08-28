@@ -231,6 +231,30 @@
             outline: none;
             border-color: #f97316;
         }
+        
+        /* Phase selector */
+        .phase-select {
+            width: 100%;
+            background: #0d0d0d;
+            border: 2px solid #334155;
+            color: #f8f8f8;
+            padding: 0.75rem;
+            font-family: 'Space Grotesk', system-ui, sans-serif;
+            font-size: 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: border-color 0.2s ease;
+        }
+        
+        .phase-select:focus {
+            outline: none;
+            border-color: #f97316;
+        }
+        
+        .phase-select option {
+            background: #0d0d0d;
+            color: #f8f8f8;
+        }
     </style>
 </head>
 <body>
@@ -272,6 +296,13 @@
                     <button id="next-phase-btn" class="control-btn primary w-full text-xl">
                         NEXT PHASE →
                     </button>
+                    <div class="mt-4">
+                        <div class="text-sm text-gray-400 mb-2 font-mono">JUMP TO PHASE</div>
+                        <select id="phase-select" class="phase-select w-full"></select>
+                        <button id="jump-phase-btn" class="control-btn w-full mt-2">
+                            GO TO SELECTED PHASE
+                        </button>
+                    </div>
                 </div>
                 
                 <!-- Game-Specific Controls -->
@@ -365,6 +396,8 @@
         const currentPhaseEl = document.getElementById('current-phase');
         const phaseIndicatorEl = document.getElementById('phase-indicator');
         const nextPhaseBtn = document.getElementById('next-phase-btn');
+        const phaseSelect = document.getElementById('phase-select');
+        const jumpPhaseBtn = document.getElementById('jump-phase-btn');
         
         // Game-specific elements
         const game1Controls = document.getElementById('game1-controls');
@@ -409,6 +442,9 @@
             
             // Setup phase indicator
             renderPhaseIndicator();
+            
+            // Setup phase selector
+            renderPhaseSelector();
             
             // Setup event listeners
             setupEventListeners();
@@ -459,6 +495,30 @@
             });
         }
         
+        function renderPhaseSelector() {
+            const labels = {
+                ONBOARDING: 'ONBOARDING · Player Registration',
+                BACKGROUND_STORY: 'BACKGROUND STORY · Case Briefing',
+                GAME1_RULES: 'GAME 1 RULES',
+                GAME1_QUIZ: 'GAME 1 QUIZ',
+                GAME1_SETTLE: 'GAME 1 SETTLEMENT',
+                GAME2_RULES: 'GAME 2 RULES',
+                GAME2_BINGO: 'GAME 2 BINGO',
+                GAME2_SETTLE: 'GAME 2 SETTLEMENT',
+                GAME3_RULES: 'GAME 3 RULES',
+                GAME3_TEAM_SELECT: 'GAME 3 TEAM SELECT',
+                FINAL_CHOICE: 'FINAL CHOICE',
+                GRAND_REVEAL: 'GRAND REVEAL'
+            };
+            phaseSelect.innerHTML = '';
+            window.CONFIG.phases.forEach(phase => {
+                const option = document.createElement('option');
+                option.value = phase;
+                option.textContent = labels[phase] || phase;
+                phaseSelect.appendChild(option);
+            });
+        }
+        
         function updateUI() {
             // Update current phase display
             currentPhaseEl.textContent = currentPhase;
@@ -473,6 +533,10 @@
                     dot.classList.add('completed');
                 }
             });
+            
+            // Keep the phase selector in sync with the current phase
+            phaseSelect.value = currentPhase;
+            jumpPhaseBtn.disabled = !window.CONFIG.phases.includes(currentPhase) || phaseSelect.value === currentPhase;
             
             // Show/hide game-specific controls
             game1Controls.classList.remove('active');
@@ -536,6 +600,21 @@
                     const nextPhase = window.CONFIG.phases[currentIndex + 1];
                     advanceToPhase(nextPhase);
                 }
+            });
+            
+            // Jump to selected phase
+            jumpPhaseBtn.addEventListener('click', () => {
+                const targetPhase = phaseSelect.value;
+                if (!window.CONFIG.phases.includes(targetPhase) || targetPhase === currentPhase) {
+                    return;
+                }
+                const targetIndex = window.CONFIG.phases.indexOf(targetPhase);
+                const currentIndex = window.CONFIG.phases.indexOf(currentPhase);
+                // Confirm when jumping backwards to avoid accidentally rewinding the game
+                if (targetIndex < currentIndex && !confirm('Jump back to ' + targetPhase + "? All players will be taken to this phase's screen.")) {
+                    return;
+                }
+                advanceToPhase(targetPhase);
             });
             
             // Game 1 controls
