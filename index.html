@@ -1271,7 +1271,25 @@
             document.getElementById('final-score').textContent = currentPlayer.score || 0;
             // Rank would be calculated by host, we'll display it when available
             document.getElementById('final-rank').textContent = 'Calculating...';
-            document.getElementById('clue-reward').textContent = 'Processing...';
+            
+            renderClueRewardDisplay('clue-reward');
+        }
+        
+        // Fetch the player's latest unlocked clues from Firebase and show how many
+        // of each level they have earned (clues are distributed by the host on settlement)
+        function renderClueRewardDisplay(elementId) {
+            const el = document.getElementById(elementId);
+            if (!el || !currentPlayer || !currentPlayer.id) return;
+            
+            database.ref(`${window.CONFIG.dbPaths.players}/${currentPlayer.id}/unlocked_clues`).once('value', (snapshot) => {
+                const clues = snapshot.val() || [];
+                if (!Array.isArray(clues) || clues.length === 0) {
+                    el.textContent = 'No clues earned';
+                    return;
+                }
+                const count = (lv) => clues.filter(c => typeof c === 'string' && c.startsWith(lv)).length;
+                el.textContent = `Lv1 × ${count('level1')}   Lv2 × ${count('level2')}   Lv3 × ${count('level3')}`;
+            });
         }
         
         function initBingoBoard() {
@@ -1410,15 +1428,7 @@
             const lines = currentPlayer.bingo_lines || 0;
             document.getElementById('bingo-final-lines').textContent = lines;
             
-            // Determine reward based on lines
-            let reward = 'LEVEL 1 CLUE';
-            if (lines >= 2) {
-                reward = 'LEVEL 3 CLUE (Top 10) or LEVEL 2 CLUE';
-            } else if (lines >= 1) {
-                reward = 'LEVEL 1 + LEVEL 2 CLUES';
-            }
-            
-            document.getElementById('bingo-clue-reward').textContent = reward;
+            renderClueRewardDisplay('bingo-clue-reward');
         }
         
         function updateTeamSelection() {

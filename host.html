@@ -728,9 +728,21 @@
         }
         
         function advanceToPhase(phase) {
-            database.ref(window.CONFIG.dbPaths.gameState).update({
+            const updates = {
                 current_phase: phase
-            });
+            };
+            
+            // Distribute clue rewards when entering the settlement phases
+            if (phase === 'GAME1_SETTLE' && !gameState.game1_clues_distributed) {
+                distributeGame1Clues();
+                updates.game1_clues_distributed = true;
+            }
+            if (phase === 'GAME2_SETTLE' && !gameState.game2_clues_distributed) {
+                distributeGame2Clues();
+                updates.game2_clues_distributed = true;
+            }
+            
+            database.ref(window.CONFIG.dbPaths.gameState).update(updates);
         }
         
         function advanceQuizStep() {
@@ -870,6 +882,66 @@
             });
         }
         
+        // Distribute Game 1 rewards based on quiz ranking (on entering GAME1_SETTLE)
+        function distributeGame1Clues() {
+            if (Object.keys(players).length === 0) return;
+            
+            const ranked = Object.keys(players)
+                .map(id => ({ id, ...players[id] }))
+                .sort((a, b) => (b.score || 0) - (a.score || 0));
+            
+            const updates = {};
+            ranked.forEach((player, idx) => {
+                const rank = idx + 1;
+                // config: rank1-10 -> level3, rank11-20 -> level2, rank21+ -> level1
+                const level = window.GenderRevealUtils.getClueLevelFromRank(rank);
+                const updatedPlayer = { ...player };
+                window.GenderRevealUtils.giveClue(updatedPlayer, level);
+                updates[player.id] = { unlocked_clues: updatedPlayer.unlocked_clues };
+            });
+            
+            if (Object.keys(updates).length > 0) {
+                database.ref(window.CONFIG.dbPaths.players).update(updates);
+            }
+        }
+        
+        // Distribute Game 2 rewards based on bingo results (on entering GAME2_SETTLE)
+        function distributeGame2Clues() {
+            if (Object.keys(players).length === 0) return;
+            
+            // Top 10 completers (>=2 lines, by completion time) get the top reward
+            const cutoff = window.CONFIG.game2.bingoTop10Cutoff || 10;
+            const completed = Object.keys(players)
+                .map(id => ({ id, ...players[id] }))
+                .filter(p => (p.bingo_lines || 0) >= 2)
+                .sort((a, b) => (a.bingo_completed_at || Number.MAX_SAFE_INTEGER) - (b.bingo_completed_at || Number.MAX_SAFE_INTEGER));
+            const topIds = new Set(completed.slice(0, cutoff).map(p => p.id));
+            
+            const updates = {};
+            Object.keys(players).forEach(playerId => {
+                const player = players[playerId];
+                const updatedPlayer = { ...player };
+                const lines = player.bingo_lines || 0;
+                
+                if (topIds.has(playerId)) {
+                    window.GenderRevealUtils.giveClue(updatedPlayer, window.CONFIG.game2.bingoTop10Reward);
+                } else if (lines >= 1) {
+                    // One line (or more but not top 10) - the one-line reward list
+                    (window.CONFIG.game2.bingoOneLineReward || ['level1', 'level2']).forEach(level => {
+                        window.GenderRevealUtils.giveClue(updatedPlayer, level);
+                    });
+                } else {
+                    window.GenderRevealUtils.giveClue(updatedPlayer, window.CONFIG.game2.bingoZeroLineReward);
+                }
+                
+                updates[playerId] = { unlocked_clues: updatedPlayer.unlocked_clues };
+            });
+            
+            if (Object.keys(updates).length > 0) {
+                database.ref(window.CONFIG.dbPaths.players).update(updates);
+            }
+        }
+        
         function startGrandReveal() {
             database.ref(window.CONFIG.dbPaths.gameState).update({
                 reveal_triggered_at: firebase.database.ServerValue.TIMESTAMP
@@ -889,6 +961,8 @@
                     drawn_bingo_phrases: [],
                     game1_stage: 'GROUP',
                     common_reveal_stage: 0,
+                    game1_clues_distributed: false,
+                    game2_clues_distributed: false,
                     winning_team: '',
                     reveal_triggered_at: null
                 });
