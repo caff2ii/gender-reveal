@@ -192,6 +192,54 @@
             cursor: pointer;
         }
         
+        /* Persistent app-style top bar for reaching the Evidence Library from any phase */
+        #evidence-nav-bar {
+            position: sticky;
+            top: 0;
+            z-index: 40;
+            margin: -1rem -1rem 1rem;
+            padding: 0.75rem 1rem;
+            background: rgba(13, 13, 13, 0.95);
+            backdrop-filter: blur(6px);
+            border-bottom: 1px solid #334155;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        #evidence-nav-bar.hidden {
+            display: none;
+        }
+        
+        /* Evidence Library overlay - a true modal, independent of the phase screens underneath */
+        #clue-library-screen {
+            position: fixed;
+            inset: 0;
+            z-index: 1050;
+        }
+        
+        #clue-library-screen.hidden {
+            display: none;
+        }
+        
+        .evidence-library-backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.75);
+        }
+        
+        .evidence-library-panel {
+            position: relative;
+            max-width: 480px;
+            margin: 6vh auto 0;
+            max-height: 88vh;
+            overflow-y: auto;
+            background: #0d0d0d;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 1.25rem;
+        }
+        
         /* Bingo cell */
         .bingo-cell {
             background: #1a1a1a;
@@ -392,6 +440,12 @@
                 </div>
             </div>
             
+            <!-- Persistent app-style top bar - Evidence Library is reachable from every phase, not just specific screens -->
+            <div id="evidence-nav-bar" class="hidden">
+                <span class="font-mono text-xs text-gray-400 tracking-widest">📁 CASE FILE</span>
+                <button id="open-evidence-btn" class="btn-secondary px-4 py-2 rounded-lg text-sm">EVIDENCE LIBRARY</button>
+            </div>
+            
             <!-- Game Screens (hidden by default) -->
             <div id="game-screens" class="hidden">
                 <!-- Waiting for Host (shown after registration while phase is still ONBOARDING) -->
@@ -532,39 +586,6 @@
                         <div class="text-sm text-gray-400 mb-2 font-mono">CURRENT PHRASE</div>
                         <div id="bingo-phrase-text" class="text-xl font-bold">-</div>
                     </div>
-                    
-                    <button id="view-clues-btn" class="btn-secondary w-full py-3 rounded-lg">VIEW EVIDENCE LIBRARY</button>
-                </div>
-                
-                <!-- Clue Library -->
-                <div id="clue-library-screen" class="hidden phase-transition">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-xl font-bold font-mono">EVIDENCE LIBRARY</h2>
-                        <button id="close-clues-btn" class="text-sm text-gray-400">✕ CLOSE</button>
-                    </div>
-                    
-                    <div class="space-y-4">
-                        <div class="case-file p-4 rounded-lg">
-                            <h3 class="font-bold mb-3 text-orange-500">LEVEL 1 EVIDENCE</h3>
-                            <div id="level1-clues" class="grid grid-cols-3 gap-2">
-                                <!-- Clues will be loaded here -->
-                            </div>
-                        </div>
-                        
-                        <div class="case-file p-4 rounded-lg">
-                            <h3 class="font-bold mb-3 text-amber-500">LEVEL 2 EVIDENCE</h3>
-                            <div id="level2-clues" class="grid grid-cols-3 gap-2">
-                                <!-- Clues will be loaded here -->
-                            </div>
-                        </div>
-                        
-                        <div class="case-file p-4 rounded-lg">
-                            <h3 class="font-bold mb-3 text-red-500">LEVEL 3 EVIDENCE</h3>
-                            <div id="level3-clues" class="grid grid-cols-3 gap-2">
-                                <!-- Clues will be loaded here -->
-                            </div>
-                        </div>
-                    </div>
                 </div>
                 
                 <!-- Game 2 Settlement -->
@@ -620,10 +641,6 @@
                 
                 <!-- Final Choice -->
                 <div id="final-choice-screen" class="hidden phase-transition">
-                    <div class="mb-4">
-                        <button id="view-final-clues-btn" class="btn-secondary w-full py-3 rounded-lg">VIEW EVIDENCE LIBRARY</button>
-                    </div>
-                    
                     <div class="evidence-board p-6 rounded-lg text-center">
                         <h2 class="text-xl font-bold mb-6 font-mono text-orange-500">FINAL PREDICTION</h2>
                         <p class="text-gray-400 mb-6">根據你所收集既線索，作出最終判斷</p>
@@ -657,6 +674,40 @@
                                 <div id="prediction-correct" class="text-xl font-bold">-</div>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Evidence Library overlay - opened from the persistent top bar, available in any phase -->
+    <div id="clue-library-screen" class="hidden">
+        <div class="evidence-library-backdrop" onclick="closeEvidenceLibrary()"></div>
+        <div class="evidence-library-panel">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold font-mono">EVIDENCE LIBRARY</h2>
+                <button id="close-clues-btn" class="text-sm text-gray-400">✕ CLOSE</button>
+            </div>
+            
+            <div class="space-y-4">
+                <div class="case-file p-4 rounded-lg">
+                    <h3 class="font-bold mb-3 text-orange-500">LEVEL 1 EVIDENCE</h3>
+                    <div id="level1-clues" class="grid grid-cols-3 gap-2">
+                        <!-- Clues will be loaded here -->
+                    </div>
+                </div>
+                
+                <div class="case-file p-4 rounded-lg">
+                    <h3 class="font-bold mb-3 text-amber-500">LEVEL 2 EVIDENCE</h3>
+                    <div id="level2-clues" class="grid grid-cols-3 gap-2">
+                        <!-- Clues will be loaded here -->
+                    </div>
+                </div>
+                
+                <div class="case-file p-4 rounded-lg">
+                    <h3 class="font-bold mb-3 text-red-500">LEVEL 3 EVIDENCE</h3>
+                    <div id="level3-clues" class="grid grid-cols-3 gap-2">
+                        <!-- Clues will be loaded here -->
                     </div>
                 </div>
             </div>
@@ -729,9 +780,10 @@
         const bingoBoardEl = document.getElementById('bingo-board');
         const bingoLines = document.getElementById('bingo-lines');
         const bingoPhraseText = document.getElementById('bingo-phrase-text');
-        const viewCluesBtn = document.getElementById('view-clues-btn');
         
-        // Clue library elements
+        // Persistent top bar + clue library elements
+        const evidenceNavBar = document.getElementById('evidence-nav-bar');
+        const openEvidenceBtn = document.getElementById('open-evidence-btn');
         const clueLibraryScreen = document.getElementById('clue-library-screen');
         const closeCluesBtn = document.getElementById('close-clues-btn');
         
@@ -742,7 +794,6 @@
         const selectedTeam = document.getElementById('selected-team');
         
         // Final choice elements
-        const viewFinalCluesBtn = document.getElementById('view-final-clues-btn');
         const predictBoyBtn = document.getElementById('predict-boy-btn');
         const predictGirlBtn = document.getElementById('predict-girl-btn');
         const predictionDisplay = document.getElementById('prediction-display');
@@ -840,6 +891,7 @@
             mainContentEl.classList.remove('hidden');
             onboardingScreen.classList.remove('hidden');
             gameScreens.classList.add('hidden');
+            evidenceNavBar.classList.add('hidden');
         }
         
         function showGameScreens() {
@@ -847,7 +899,12 @@
             mainContentEl.classList.remove('hidden');
             onboardingScreen.classList.add('hidden');
             gameScreens.classList.remove('hidden');
+            evidenceNavBar.classList.remove('hidden');
             updateGameScreen();
+        }
+        
+        function closeEvidenceLibrary() {
+            clueLibraryScreen.classList.add('hidden');
         }
         
         function showWaitingScreen() {
@@ -1005,17 +1062,13 @@
             
             // Quiz options will be dynamically added
             // Bingo cells will be dynamically added
-            // Clue library
-            viewCluesBtn.addEventListener('click', () => {
+            // Clue library - reachable at any time from the persistent top bar
+            openEvidenceBtn.addEventListener('click', () => {
                 clueLibraryScreen.classList.remove('hidden');
                 updateClueLibrary();
             });
             closeCluesBtn.addEventListener('click', () => {
                 clueLibraryScreen.classList.add('hidden');
-            });
-            viewFinalCluesBtn.addEventListener('click', () => {
-                clueLibraryScreen.classList.remove('hidden');
-                updateClueLibrary();
             });
             
             // Team selection
