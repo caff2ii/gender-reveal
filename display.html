@@ -482,6 +482,27 @@
             margin-top: 3rem;
             z-index: 10;
         }
+
+        .reveal-stats-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.68), rgba(255, 235, 245, 0.52));
+            border: 1px solid rgba(255, 255, 255, 0.82);
+            border-radius: 1rem;
+            padding: 1.25rem 2rem 1.75rem;
+            box-shadow: 0 12px 32px rgba(190, 109, 157, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(8px);
+        }
+
+        .reveal-stats-label {
+            color: #a21caf;
+            letter-spacing: 0.12em;
+            line-height: 1.4;
+            margin-bottom: 1rem;
+        }
+
+        .reveal-stats-count {
+            color: #475569;
+            margin-top: 0.75rem;
+        }
     </style>
 </head>
 <body>
@@ -812,10 +833,10 @@
                 </div>
                 
                 <div id="reveal-stats-panel">
-                    <div class="bg-gray-800/50 p-8 rounded-lg border border-gray-700 max-w-2xl mx-auto">
-                        <div class="text-sm text-gray-400 mb-4 font-mono">PREDICTION ACCURACY</div>
+                    <div class="reveal-stats-card max-w-2xl mx-auto">
+                        <div class="reveal-stats-label text-sm font-mono">PREDICTION ACCURACY</div>
                         <div id="correct-percentage" class="tv-heading text-green-500">0%</div>
-                        <div id="correct-count" class="tv-subheading mt-4">0 / 0</div>
+                        <div id="correct-count" class="reveal-stats-count tv-subheading">0 / 0</div>
                     </div>
                 </div>
                 
