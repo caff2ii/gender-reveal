@@ -1,1 +1,309 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Case Reveal — Admin</title><script src="https://cdn.tailwindcss.com"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script><script src="config.js"></script></head><body class="min-h-screen bg-slate-950 p-8 text-stone-100"><main class="mx-auto max-w-xl"><p class="font-mono text-xs tracking-[.25em] text-cyan-300">RESTRICTED / ADMIN</p><div id="lock" class="mt-8"><input id="pass" type="password" class="w-full rounded bg-slate-800 p-3" placeholder="Password"><button class="mt-3 w-full rounded bg-cyan-400 p-3 font-bold text-slate-950" onclick="unlock()">UNLOCK</button></div><section id="panel" class="hidden mt-8"><h1 class="text-3xl font-black">Data controls</h1><p id="count" class="mt-3 text-slate-300"></p><button onclick="resetAll()" class="mt-6 rounded bg-red-500 px-4 py-3 font-bold">RESET PLAYERS + GAME STATE</button><p class="mt-3 text-xs text-slate-400">This deliberately keeps questions, bingo phrases, clues and secret gender.</p></section></main><script>function unlock(){if(document.querySelector('#pass').value!==GENDER_REVEAL_CONFIG.adminPassword)return alert('Incorrect password');document.querySelector('#lock').classList.add('hidden');document.querySelector('#panel').classList.remove('hidden');if(Game.init())Game.ref('players').on('value',s=>document.querySelector('#count').textContent=s.numChildren()+' registered players')}async function resetAll(){if(!confirm('Clear all players and the current game state?'))return;await Game.resetGame();alert('Game reset. Reference content was preserved.')}window.unlock=unlock;window.resetAll=resetAll;</script></body></html>
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DETECTIVE DATABASE - Admin Management</title>
+  <script src="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/firebase@10.8.0/firebase-app-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/firebase@10.8.0/firebase-database-compat.js"></script>
+  <script src="config.js"></script>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen font-sans">
+
+  <div id="password-gate" class="fixed inset-0 bg-gray-950 flex justify-center items-center p-4 z-50">
+    <div class="w-full max-w-md bg-gray-800 border border-gray-700 rounded-lg p-6 shadow-2xl">
+      <div class="text-center mb-6">
+        <span class="inline-block px-3 py-1 bg-blue-900 text-blue-200 text-xs font-bold tracking-widest uppercase rounded mb-2">System Admin</span>
+        <h1 class="text-2xl font-black text-white tracking-wider">DATABASE ACCESS</h1>
+        <p class="text-xs text-gray-400 mt-1">AUTHORIZATION REQUIRED (PASS: 1125)</p>
+      </div>
+      <form id="gate-form" onsubmit="handleAuth(event)">
+        <input type="password" id="gate-pass" class="w-full bg-gray-900 border border-gray-700 rounded px-4 py-3 text-center text-xl tracking-widest text-white focus:outline-none focus:border-blue-500 mb-4" placeholder="ENTER PIN" maxlength="10" required>
+        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded transition uppercase tracking-widest">Login Console</button>
+      </form>
+      <p id="gate-err" class="text-red-500 text-xs text-center mt-3 hidden">ACCESS DENIED</p>
+    </div>
+  </div>
+
+  <div id="admin-app" class="hidden container mx-auto p-4 md:p-8 max-w-6xl">
+    <header class="flex justify-between items-center border-b border-gray-800 pb-4 mb-8">
+      <div>
+        <h1 class="text-2xl font-black text-white tracking-wider">🕵️‍♂️ CASE FILE CONTROL CENTER</h1>
+        <p class="text-xs text-gray-400">Questions, Bingo Phrases & Clues Editor</p>
+      </div>
+      <div class="text-xs bg-gray-800 px-3 py-1 rounded border border-gray-700 text-gray-300">
+        Live Database Sync: Active
+      </div>
+    </header>
+
+    <div class="flex space-x-2 border-b border-gray-800 mb-6">
+      <button onclick="switchTab('group-quiz')" id="tab-btn-group-quiz" class="py-2 px-4 font-bold text-sm border-b-2 border-blue-500 text-blue-400">Group Quiz</button>
+      <button onclick="switchTab('common-quiz')" id="tab-btn-common-quiz" class="py-2 px-4 font-bold text-sm text-gray-400 hover:text-white">Common Quiz</button>
+      <button onclick="switchTab('bingo')" id="tab-btn-bingo" class="py-2 px-4 font-bold text-sm text-gray-400 hover:text-white">Bingo Phrases</button>
+      <button onclick="switchTab('clues')" id="tab-btn-clues" class="py-2 px-4 font-bold text-sm text-gray-400 hover:text-white">Clues System</button>
+    </div>
+
+    <div id="tab-group-quiz" class="tab-content">
+      <div class="mb-4">
+        <label class="block text-xs font-bold text-gray-400 mb-2">SELECT FRIEND GROUP:</label>
+        <select id="group-select" onchange="loadGroupQuestions()" class="w-full md:w-64 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white">
+          </select>
+      </div>
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="font-bold text-lg text-white">Group Questions (Target: 3)</h3>
+        <button onclick="addGroupQuestion()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-2 rounded">+ Add Question</button>
+      </div>
+      <div id="group-questions-container" class="space-y-4"></div>
+    </div>
+
+    <div id="tab-common-quiz" class="tab-content hidden">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="font-bold text-lg text-white">Common Quiz Questions (Target: 5)</h3>
+        <button onclick="addCommonQuestion()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-2 rounded">+ Add Question</button>
+      </div>
+      <div id="common-questions-container" class="space-y-4"></div>
+    </div>
+
+    <div id="tab-bingo" class="tab-content hidden">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="font-bold text-lg text-white">Bingo Phrases Pool</h3>
+        <button onclick="addBingoPhrase()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-2 rounded">+ Add Phrase</button>
+      </div>
+      <div id="bingo-phrases-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+    </div>
+
+    <div id="tab-clues" class="tab-content hidden">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div>
+          <h3 class="font-bold text-yellow-400 mb-3 border-b border-yellow-800 pb-1">LEVEL 1 CLUES (3)</h3>
+          <div id="clues-level1-container" class="space-y-3"></div>
+        </div>
+        <div>
+          <h3 class="font-bold text-yellow-500 mb-3 border-b border-yellow-800 pb-1">LEVEL 2 CLUES (3)</h3>
+          <div id="clues-level2-container" class="space-y-3"></div>
+        </div>
+        <div>
+          <h3 class="font-bold text-red-400 mb-3 border-b border-red-800 pb-1">LEVEL 3 CLUES (3)</h3>
+          <div id="clues-level3-container" class="space-y-3"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    firebase.initializeApp(window.CONFIG.firebase);
+    const db = firebase.database();
+
+    function handleAuth(e) {
+      e.preventDefault();
+      if (document.getElementById('gate-pass').value === window.CONFIG.passwords.admin) {
+        document.getElementById('password-gate').classList.add('hidden');
+        document.getElementById('admin-app').classList.remove('hidden');
+        initAdmin();
+      } else {
+        document.getElementById('gate-err').classList.remove('hidden');
+      }
+    }
+
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('[id^="tab-btn-"]').forEach(el => {
+        el.className = 'py-2 px-4 font-bold text-sm text-gray-400 hover:text-white';
+      });
+      document.getElementById(`tab-${tab}`).classList.remove('hidden');
+      document.getElementById(`tab-btn-${tab}`).className = 'py-2 px-4 font-bold text-sm border-b-2 border-blue-500 text-blue-400';
+    }
+
+    function initAdmin() {
+      // Populate Group Selector
+      const select = document.getElementById('group-select');
+      select.innerHTML = '';
+      window.CONFIG.groupIds.forEach(gid => {
+        const opt = document.createElement('option');
+        opt.value = gid;
+        opt.innerText = window.CONFIG.groups[gid];
+        select.appendChild(opt);
+      });
+
+      loadGroupQuestions();
+      loadCommonQuestions();
+      loadBingoPhrases();
+      loadClues();
+    }
+
+    // --- GROUP QUIZ LOGIC ---
+    function loadGroupQuestions() {
+      const gid = document.getElementById('group-select').value;
+      db.ref(`questions/group_quiz/${gid}`).on('value', snap => {
+        const data = snap.val() || [];
+        const container = document.getElementById('group-questions-container');
+        container.innerHTML = '';
+        data.forEach((q, idx) => {
+          container.appendChild(renderQuestionCard(`questions/group_quiz/${gid}`, idx, q));
+        });
+      });
+    }
+
+    function addGroupQuestion() {
+      const gid = document.getElementById('group-select').value;
+      db.ref(`questions/group_quiz/${gid}`).once('value', snap => {
+        const arr = snap.val() || [];
+        arr.push({ q: "新題目", options: ["選項A", "選項B", "選項C", "選項D"], answer: 0 });
+        db.ref(`questions/group_quiz/${gid}`).set(arr);
+      });
+    }
+
+    // --- COMMON QUIZ LOGIC ---
+    function loadCommonQuestions() {
+      db.ref(`questions/common_quiz`).on('value', snap => {
+        const data = snap.val() || [];
+        const container = document.getElementById('common-questions-container');
+        container.innerHTML = '';
+        data.forEach((q, idx) => {
+          container.appendChild(renderQuestionCard(`questions/common_quiz`, idx, q));
+        });
+      });
+    }
+
+    function addCommonQuestion() {
+      db.ref(`questions/common_quiz`).once('value', snap => {
+        const arr = snap.val() || [];
+        arr.push({ q: "新通用題目", options: ["選項A", "選項B", "選項C", "選項D"], answer: 0 });
+        db.ref(`questions/common_quiz`).set(arr);
+      });
+    }
+
+    // Generic Question Card Renderer
+    function renderQuestionCard(basePath, index, data) {
+      const card = document.createElement('div');
+      card.className = "bg-gray-800 border border-gray-700 p-4 rounded space-y-3";
+      card.innerHTML = `
+        <div class="flex justify-between items-center">
+          <span class="font-bold text-xs text-blue-400">QUESTION #${index + 1}</span>
+          <button onclick="deleteQuestion('${basePath}', ${index})" class="text-red-400 hover:text-red-300 text-xs">Delete</button>
+        </div>
+        <input type="text" value="${window.GenderRevealUtils.escapeHtml(data.q)}" onchange="updateQuestionField('${basePath}', ${index}, 'q', this.value)" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white font-bold" placeholder="題目描述">
+        <div class="grid grid-cols-2 gap-2">
+          ${[0,1,2,3].map(optIdx => `
+            <div class="flex items-center space-x-2">
+              <input type="radio" name="correct_${basePath.replace(/\//g,'_')}_${index}" ${data.answer === optIdx ? 'checked' : ''} onchange="updateQuestionField('${basePath}', ${index}, 'answer', ${optIdx})">
+              <input type="text" value="${window.GenderRevealUtils.escapeHtml(data.options[optIdx])}" onchange="updateOptionField('${basePath}', ${index}, ${optIdx}, this.value)" class="w-full bg-gray-900 border border-gray-700 rounded p-1 text-xs text-gray-200" placeholder="選項 ${String.fromCharCode(65+optIdx)}">
+            </div>
+          `).join('')}
+        </div>
+      `;
+      return card;
+    }
+
+    function updateQuestionField(basePath, index, field, value) {
+      db.ref(`${basePath}/${index}/${field}`).set(value);
+    }
+
+    function updateOptionField(basePath, qIndex, optIndex, value) {
+      db.ref(`${basePath}/${qIndex}/options/${optIndex}`).set(value);
+    }
+
+    function deleteQuestion(basePath, index) {
+      db.ref(basePath).once('value', snap => {
+        let arr = snap.val() || [];
+        arr.splice(index, 1);
+        db.ref(basePath).set(arr);
+      });
+    }
+
+    // --- BINGO PHRASES LOGIC ---
+    function loadBingoPhrases() {
+      db.ref('bingo_phrases').on('value', snap => {
+        const phrases = snap.val() || [];
+        const container = document.getElementById('bingo-phrases-container');
+        container.innerHTML = '';
+        phrases.forEach((phrase, idx) => {
+          const div = document.createElement('div');
+          div.className = "flex items-center space-x-2 bg-gray-800 p-2 rounded border border-gray-700";
+          div.innerHTML = `
+            <span class="text-xs text-gray-500 w-6">${idx+1}.</span>
+            <input type="text" value="${window.GenderRevealUtils.escapeHtml(phrase)}" onchange="updateBingoPhrase(${idx}, this.value)" class="flex-1 bg-gray-900 border border-gray-700 rounded p-1 text-sm text-white">
+            <button onclick="deleteBingoPhrase(${idx})" class="text-red-400 hover:text-red-300 text-xs px-2">X</button>
+          `;
+          container.appendChild(div);
+        });
+      });
+    }
+
+    function addBingoPhrase() {
+      db.ref('bingo_phrases').once('value', snap => {
+        const arr = snap.val() || [];
+        arr.push("新 Bingo 迷信短句");
+        db.ref('bingo_phrases').set(arr);
+      });
+    }
+
+    function updateBingoPhrase(index, val) {
+      db.ref(`bingo_phrases/${index}`).set(val);
+    }
+
+    function deleteBingoPhrase(index) {
+      db.ref('bingo_phrases').once('value', snap => {
+        let arr = snap.val() || [];
+        arr.splice(index, 1);
+        db.ref('bingo_phrases').set(arr);
+      });
+    }
+
+    // --- CLUES SYSTEM LOGIC ---
+    function loadClues() {
+      ['level1', 'level2', 'level3'].forEach(lvl => {
+        db.ref(`clues/${lvl}`).on('value', snap => {
+          const data = snap.val() || [];
+          const container = document.getElementById(`clues-${lvl}-container`);
+          container.innerHTML = '';
+          data.forEach((clue, idx) => {
+            const div = document.createElement('div');
+            div.className = "bg-gray-800 p-3 rounded border border-gray-700 space-y-2";
+            div.innerHTML = `
+              <div class="flex justify-between items-center text-xs text-gray-400">
+                <span>CLUE ID: ${lvl}_${idx+1}</span>
+                <button onclick="deleteClue('${lvl}', ${idx})" class="text-red-400">Delete</button>
+              </div>
+              <select onchange="updateClueField('${lvl}', ${idx}, 'type', this.value)" class="w-full bg-gray-900 border border-gray-700 rounded p-1 text-xs text-white">
+                <option value="text" ${clue.type==='text'?'selected':''}>Text</option>
+                <option value="image" ${clue.type==='image'?'selected':''}>Image URL</option>
+              </select>
+              <textarea onchange="updateClueField('${lvl}', ${idx}, 'content', this.value)" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-xs text-white h-16" placeholder="線索內容或圖片 URL">${window.GenderRevealUtils.escapeHtml(clue.content || '')}</textarea>
+            `;
+            container.appendChild(div);
+          });
+          if (data.length < 3) {
+            const addBtn = document.createElement('button');
+            addBtn.className = "w-full border border-dashed border-gray-700 py-2 rounded text-xs text-gray-400 hover:text-white";
+            addBtn.innerText = `+ Add ${lvl} Clue (${data.length}/3)`;
+            addBtn.onclick = () => addClue(lvl);
+            container.appendChild(addBtn);
+          }
+        });
+      });
+    }
+
+    function addClue(lvl) {
+      db.ref(`clues/${lvl}`).once('value', snap => {
+        const arr = snap.val() || [];
+        arr.push({ id: `${lvl}_${arr.length + 1}`, type: "text", content: "新線索內容" });
+        db.ref(`clues/${lvl}`).set(arr);
+      });
+    }
+
+    function updateClueField(lvl, idx, field, val) {
+      db.ref(`clues/${lvl}/${idx}/${field}`).set(val);
+    }
+
+    function deleteClue(lvl, idx) {
+      db.ref(`clues/${lvl}`).once('value', snap => {
+        let arr = snap.val() || [];
+        arr.splice(idx, 1);
+        db.ref(`clues/${lvl}`).set(arr);
+      });
+    }
+  </script>
+</body>
+</html>
