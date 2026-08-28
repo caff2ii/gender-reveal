@@ -254,8 +254,17 @@
         }
         
         .bingo-cell.marked {
-            background: #334155;
-            color: #f8f8f8;
+            background: #15803d;
+            border-color: #4ade80;
+            color: #f0fdf4;
+            font-weight: 700;
+            box-shadow: 0 0 0 1px rgba(74, 222, 128, 0.6), 0 0 12px rgba(34, 197, 94, 0.45);
+            animation: none;
+        }
+        
+        .bingo-cell.marked::after {
+            content: '  \2713';
+            color: #4ade80;
         }
         
         @keyframes pulse {
@@ -1534,7 +1543,6 @@
             // initBingoBoard runs on EVERY gameState update (including each phrase
             // the host draws), so we must NOT regenerate a fresh random board here.
             if (bingoBoard && bingoBoard.length > 0) {
-                renderBingoBoard();
                 updateBingoDisplay();
                 return;
             }
@@ -1543,7 +1551,6 @@
             if (currentPlayer.bingo_board && currentPlayer.bingo_board.length > 0) {
                 bingoBoard = currentPlayer.bingo_board;
                 markedCells = currentPlayer.marked_cells || [];
-                renderBingoBoard();
             } else {
                 generateBingoBoard();
             }
@@ -1577,6 +1584,11 @@
         function renderBingoBoard() {
             bingoBoardEl.innerHTML = '';
             
+            // Every phrase the host has drawn so far stays highlighted (while unmarked) -
+            // not just the single latest draw - so players can still see everything they're
+            // eligible to mark after the host moves on to the next phrase.
+            const drawnPhrases = Object.values(gameState.drawn_bingo_phrases || {}).map(entry => entry.phrase);
+            
             bingoBoard.forEach((phrase, index) => {
                 const cell = document.createElement('div');
                 cell.className = 'bingo-cell p-3 rounded-lg text-center text-sm font-medium cursor-pointer';
@@ -1585,6 +1597,8 @@
                 
                 if (markedCells.includes(index)) {
                     cell.classList.add('marked');
+                } else if (drawnPhrases.includes(phrase)) {
+                    cell.classList.add('highlight');
                 }
                 
                 cell.addEventListener('click', () => markBingoCell(index));
@@ -1596,19 +1610,7 @@
         
         function updateBingoDisplay() {
             bingoPhraseText.textContent = gameState.current_bingo_phrase || '-';
-            
-            // Highlight matching cells
-            const currentPhrase = gameState.current_bingo_phrase;
-            if (currentPhrase) {
-                bingoBoard.forEach((phrase, index) => {
-                    if (phrase === currentPhrase && !markedCells.includes(index)) {
-                        const cell = bingoBoardEl.children[index];
-                        if (cell) {
-                            cell.classList.add('highlight');
-                        }
-                    }
-                });
-            }
+            renderBingoBoard();
         }
         
         function markBingoCell(index) {
