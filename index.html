@@ -1277,13 +1277,22 @@
         function initBingoBoard() {
             if (!currentPlayer) return;
             
-            // Generate bingo board if not exists
-            if (!currentPlayer.bingo_board || currentPlayer.bingo_board.length === 0) {
-                generateBingoBoard();
-            } else {
+            // Use an already-generated in-memory board first. This is essential:
+            // initBingoBoard runs on EVERY gameState update (including each phrase
+            // the host draws), so we must NOT regenerate a fresh random board here.
+            if (bingoBoard && bingoBoard.length > 0) {
+                renderBingoBoard();
+                updateBingoDisplay();
+                return;
+            }
+            
+            // Restore a previously saved board from the player's Firebase data
+            if (currentPlayer.bingo_board && currentPlayer.bingo_board.length > 0) {
                 bingoBoard = currentPlayer.bingo_board;
                 markedCells = currentPlayer.marked_cells || [];
                 renderBingoBoard();
+            } else {
+                generateBingoBoard();
             }
             
             updateBingoDisplay();
@@ -1296,6 +1305,12 @@
             
             bingoBoard = selectedKeys.map(key => bingoPhrases[key]);
             markedCells = [];
+            
+            // Keep the in-memory currentPlayer in sync with the generated board so
+            // later initBingoBoard calls (e.g. on each phrase draw) do not generate
+            // a fresh random board and wipe the player's progress.
+            currentPlayer.bingo_board = bingoBoard;
+            currentPlayer.marked_cells = markedCells;
             
             // Save to Firebase
             database.ref(`${window.CONFIG.dbPaths.players}/${currentPlayer.id}`).update({
@@ -1364,6 +1379,7 @@
             }
             
             // Update Firebase
+            currentPlayer.marked_cells = markedCells;
             database.ref(`${window.CONFIG.dbPaths.players}/${currentPlayer.id}/marked_cells`).set(markedCells);
             
             renderBingoBoard();
