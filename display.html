@@ -184,6 +184,11 @@
             to { transform: rotate(360deg); }
         }
         
+        /* Hidden class - must override .loading/.modal display:flex (Tailwind's .hidden loses to later-defined rules) */
+        .hidden {
+            display: none !important;
+        }
+        
         /* Phase transitions */
         .phase-transition {
             animation: slideIn 0.5s ease;

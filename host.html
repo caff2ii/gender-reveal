@@ -164,6 +164,11 @@
             to { transform: rotate(360deg); }
         }
         
+        /* Hidden class - must override .loading/.modal display:flex (Tailwind's .hidden loses to later-defined rules) */
+        .hidden {
+            display: none !important;
+        }
+        
         /* Panel styling */
         .panel {
             background: rgba(26, 26, 26, 0.6);
