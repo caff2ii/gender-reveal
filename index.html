@@ -723,7 +723,8 @@
                         </div>
                         <div id="reveal-countdown" class="countdown-timer text-orange-500 mb-8 hidden">5</div>
                         <div id="reveal-result" class="hidden">
-                            <div class="text-4xl font-bold mb-4">IT'S A</div>
+                            <div id="reveal-word-1" class="text-4xl font-bold mb-4">IT'S</div>
+                            <div id="reveal-word-2" class="text-4xl font-bold mb-4">A</div>
                             <div id="reveal-gender" class="text-6xl font-bold mb-6">-</div>
                             <div id="prediction-result" class="p-4 bg-gray-800 rounded-lg">
                                 <div class="text-sm text-gray-400 mb-2">YOUR PREDICTION</div>
@@ -858,6 +859,8 @@
         // Reveal elements
         const revealCountdown = document.getElementById('reveal-countdown');
         const revealResult = document.getElementById('reveal-result');
+        const revealWord1 = document.getElementById('reveal-word-1');
+        const revealWord2 = document.getElementById('reveal-word-2');
         const revealGender = document.getElementById('reveal-gender');
         const predictionCorrect = document.getElementById('prediction-correct');
         
@@ -1865,6 +1868,12 @@
         // start the countdown - simply entering this phase must show a waiting state instead.
         let lastHandledRevealTrigger = null;
         let revealCountdownTimer = null;
+        let revealSequenceTimers = [];
+
+        function clearRevealSequenceTimers() {
+            revealSequenceTimers.forEach(timer => clearTimeout(timer));
+            revealSequenceTimers = [];
+        }
         
         function enterGrandRevealPhase() {
             const revealWaiting = document.getElementById('reveal-waiting');
@@ -1875,6 +1884,7 @@
                     clearInterval(revealCountdownTimer);
                     revealCountdownTimer = null;
                 }
+                clearRevealSequenceTimers();
                 revealCountdown.classList.add('hidden');
                 revealResult.classList.add('hidden');
                 revealWaiting.classList.remove('hidden');
@@ -1889,7 +1899,11 @@
         }
         
         function startRevealCountdown() {
+            clearRevealSequenceTimers();
             revealResult.classList.add('hidden');
+            revealWord1.classList.add('hidden');
+            revealWord2.classList.add('hidden');
+            revealGender.classList.add('hidden');
             revealCountdown.classList.remove('hidden');
             
             // Anchor to the host's trigger timestamp (not a fresh local 5) so every
@@ -1919,9 +1933,19 @@
             database.ref(window.CONFIG.dbPaths.secretGender).once('value', (snapshot) => {
                 const secretGender = snapshot.val();
                 
-                revealResult.classList.remove('hidden');
                 revealGender.textContent = secretGender === 'BOY' ? '👦 BOY!' : '👧 GIRL!';
                 revealGender.className = `text-6xl font-bold mb-6 ${secretGender === 'BOY' ? 'text-blue-500' : 'text-pink-500'}`;
+                revealGender.classList.add('hidden');
+
+                clearRevealSequenceTimers();
+                revealSequenceTimers = [
+                    setTimeout(() => {
+                        revealResult.classList.remove('hidden');
+                        revealWord1.classList.remove('hidden');
+                    }, 800),
+                    setTimeout(() => revealWord2.classList.remove('hidden'), 1400),
+                    setTimeout(() => revealGender.classList.remove('hidden'), 2050)
+                ];
                 
                 // Check if prediction was correct
                 if (currentPlayer && currentPlayer.final_prediction) {
