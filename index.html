@@ -153,6 +153,7 @@
             z-index: 1100;
             cursor: zoom-out;
             padding: 24px;
+            overflow-y: auto;
         }
         
         #image-lightbox.hidden {
@@ -168,6 +169,8 @@
         
         #image-lightbox-text {
             max-width: 480px;
+            max-height: 80vh;
+            overflow-y: auto;
             background: #1a1a1a;
             border: 1px solid #334155;
             border-radius: 8px;
@@ -176,6 +179,7 @@
             line-height: 1.6;
             text-align: center;
             color: #f8f8f8;
+            white-space: pre-line;
         }
         
         #image-lightbox-close {
@@ -1817,7 +1821,7 @@
                             div.appendChild(img);
                         } else {
                             const span = document.createElement('span');
-                            span.className = 'text-xs leading-snug break-words cursor-zoom-in';
+                            span.className = 'text-xs leading-snug break-words whitespace-pre-line cursor-zoom-in';
                             span.textContent = clue;
                             span.addEventListener('click', () => openTextLightbox(clue));
                             div.appendChild(span);
