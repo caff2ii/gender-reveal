@@ -672,8 +672,8 @@
         }
         
         function updateDisplay() {
-            // Hide all screens
-            document.querySelectorAll('#main-content > div > div').forEach(screen => {
+            // Hide all phase screens (screens are the direct children of #main-content with ids ending in "-screen")
+            document.querySelectorAll('#main-content > div[id$="-screen"]').forEach(screen => {
                 screen.classList.add('hidden');
             });
             
