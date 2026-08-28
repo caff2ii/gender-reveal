@@ -594,6 +594,7 @@
         let clues = {};
         let groupQuizQuestions = [];
         let commonQuizQuestions = [];
+        let questionsLoaded = false;
         let currentQuizIndex = 0;
         let bingoBoard = [];
         let markedCells = [];
@@ -737,6 +738,7 @@
         function setupQuestionsListener() {
             database.ref('questions').on('value', (snapshot) => {
                 questions = snapshot.val() || { group_quiz: {}, common_quiz: {} };
+                questionsLoaded = true;
                 
                 if (currentPlayer) {
                     loadGroupQuizQuestions();
@@ -1000,6 +1002,13 @@
         function loadQuiz() {
             if (!currentPlayer) return;
             
+            // Derive the question arrays from the latest questions snapshot.
+            // Must not rely on the questions listener timing - a freshly registered
+            // player joined AFTER the listener's initial fire, so without this the
+            // arrays would stay empty and the quiz would be stuck on "載入中...".
+            loadGroupQuizQuestions();
+            loadCommonQuizQuestions();
+            
             quizScore.textContent = currentPlayer.score || 0;
             
             const stage = gameState.game1_stage || 'GROUP';
@@ -1007,6 +1016,17 @@
             if (stage === 'GROUP') {
                 // Self-paced: each player advances through their own group questions
                 const groupIndex = currentPlayer.group_quiz_index || 0;
+                
+                // If this group has no questions in the database, don't block the whole party
+                if (questionsLoaded && !currentPlayer.group_quiz_done && groupQuizQuestions.length === 0) {
+                    console.warn('No group questions found for ' + currentPlayer.group + ' - auto-completing group quiz');
+                    currentPlayer.group_quiz_done = true;
+                    database.ref(`${window.CONFIG.dbPaths.players}/${currentPlayer.id}`).update({
+                        group_quiz_done: true,
+                        group_quiz_completed_at: firebase.database.ServerValue.TIMESTAMP
+                    });
+                }
+                
                 const total = groupQuizQuestions.length || window.CONFIG.game1.groupQuizCount;
                 quizProgress.style.width = `${Math.min((groupIndex / total) * 100, 100)}%`;
                 
