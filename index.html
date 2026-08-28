@@ -433,6 +433,221 @@
             outline: none;
             border-color: #f97316;
         }
+
+        /* Onboarding: investigation intake desk */
+        #onboarding-screen {
+            position: relative;
+            max-width: 560px;
+            margin: 5vh auto 0;
+            padding: 2rem;
+            overflow: hidden;
+            background-color: #101b2d;
+            background-image:
+                linear-gradient(rgba(77, 208, 225, 0.07) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(77, 208, 225, 0.07) 1px, transparent 1px),
+                linear-gradient(145deg, rgba(245, 158, 11, 0.12), transparent 42%);
+            background-size: 24px 24px, 24px 24px, 100% 100%;
+            border: 1px solid #52647d;
+            border-top: 4px solid #f59e0b;
+            box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+        }
+
+        #onboarding-screen::before {
+            content: 'CASE 09 // INTAKE DESK';
+            position: absolute;
+            top: 0.7rem;
+            right: 1rem;
+            color: #7dd3fc;
+            font: 500 0.65rem 'IBM Plex Mono', monospace;
+            letter-spacing: 0.12em;
+        }
+
+        #onboarding-screen::after {
+            content: 'OPEN INVESTIGATION';
+            position: absolute;
+            right: -2.3rem;
+            bottom: 2.4rem;
+            padding: 0.3rem 2.5rem;
+            transform: rotate(-14deg);
+            color: rgba(248, 113, 113, 0.75);
+            border: 1px solid rgba(248, 113, 113, 0.55);
+            font: 700 0.65rem 'IBM Plex Mono', monospace;
+            letter-spacing: 0.12em;
+            pointer-events: none;
+        }
+
+        #onboarding-screen .onboarding-header {
+            position: relative;
+            margin-bottom: 2rem;
+            padding: 1.25rem 1rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid #40516a;
+        }
+
+        #onboarding-screen .onboarding-kicker {
+            margin-bottom: 0.5rem;
+            color: #fbbf24;
+            font: 500 0.7rem 'IBM Plex Mono', monospace;
+            letter-spacing: 0.2em;
+        }
+
+        #onboarding-screen .onboarding-header h1 {
+            color: #f8fafc;
+            letter-spacing: 0.06em;
+        }
+
+        #onboarding-screen .onboarding-subtitle {
+            color: #7dd3fc;
+        }
+
+        #onboarding-screen .onboarding-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.8rem;
+            color: #a7f3d0;
+            font: 500 0.7rem 'IBM Plex Mono', monospace;
+            letter-spacing: 0.08em;
+        }
+
+        #onboarding-screen .onboarding-status::before {
+            content: '';
+            width: 0.5rem;
+            height: 0.5rem;
+            border-radius: 50%;
+            background: #34d399;
+            box-shadow: 0 0 10px #34d399;
+        }
+
+        #onboarding-screen #new-player-form,
+        #onboarding-screen #old-player-form {
+            position: relative;
+            padding: 1.25rem;
+            background: rgba(7, 15, 29, 0.58);
+            border: 1px solid #334155;
+        }
+
+        #onboarding-screen #old-player-form {
+            border-top-color: #0e7490;
+        }
+
+        #onboarding-screen h2 {
+            color: #f8fafc;
+            letter-spacing: 0.08em;
+        }
+
+        #onboarding-screen .form-group label {
+            color: #7dd3fc;
+            letter-spacing: 0.08em;
+        }
+
+        #onboarding-screen .input-dark {
+            background: #0b1424;
+            border-color: #40516a;
+        }
+
+        #onboarding-screen .input-dark:focus {
+            border-color: #fbbf24;
+            box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.15);
+        }
+
+        #onboarding-screen #register-btn {
+            background: #d97706;
+            color: #fff7ed;
+            box-shadow: 0 5px 0 #92400e;
+        }
+
+        #onboarding-screen #register-btn:hover {
+            background: #f59e0b;
+        }
+
+        #onboarding-screen #login-btn {
+            background: #0e7490;
+            color: #ecfeff;
+            box-shadow: 0 5px 0 #155e75;
+        }
+
+        #onboarding-screen #login-btn:hover {
+            background: #0891b2;
+        }
+
+        @media (max-width: 640px) {
+            #onboarding-screen {
+                margin-top: 1rem;
+                padding: 1rem;
+            }
+
+            #onboarding-screen::before {
+                position: static;
+                display: block;
+                margin-bottom: 0.5rem;
+            }
+        }
+
+        /* Shared investigation styling for stages 02-11 only. */
+        .investigation-phase {
+            position: relative;
+            color: #e2e8f0;
+        }
+
+        .investigation-phase:not(.hidden)::before {
+            content: 'EVIDENCE REVIEW // ACTIVE';
+            display: block;
+            margin-bottom: 0.75rem;
+            color: #7dd3fc;
+            font: 500 0.6rem 'IBM Plex Mono', monospace;
+            letter-spacing: 0.14em;
+        }
+
+        .investigation-phase h2 {
+            color: #fbbf24;
+        }
+
+        .investigation-phase h3 {
+            color: #f8fafc;
+        }
+
+        .investigation-phase .evidence-board {
+            background: linear-gradient(145deg, #14243a 0%, #0d1829 100%);
+            border-color: #52647d;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(125, 211, 252, 0.08);
+        }
+
+        .investigation-phase [class*="bg-gray-800"] {
+            background: rgba(7, 15, 29, 0.72);
+            border-color: #40516a;
+        }
+
+        .investigation-phase [class*="text-gray-400"] {
+            color: #a5b4c8;
+        }
+
+        .investigation-phase .progress-fill {
+            background: linear-gradient(90deg, #0e7490, #fbbf24);
+        }
+
+        .investigation-phase .bingo-cell {
+            background: #14243a;
+            border-color: #52647d;
+        }
+
+        .investigation-phase .bingo-cell.highlight {
+            border-color: #fbbf24;
+            box-shadow: 0 0 12px rgba(251, 191, 36, 0.35);
+        }
+
+        .investigation-phase .bingo-cell.marked {
+            background: #136f63;
+            border-color: #34d399;
+        }
+
+        .investigation-phase [class*="bg-blue-600"] {
+            background: #2563a8;
+        }
+
+        .investigation-phase [class*="bg-pink-600"] {
+            background: #be4d78;
+        }
         
         /* Phase transitions */
         .phase-transition {
@@ -483,9 +698,11 @@
         <div id="main-content" class="hidden p-4">
             <!-- Onboarding Screen -->
             <div id="onboarding-screen" class="phase-transition">
-                <div class="text-center mb-8">
+                <div class="onboarding-header">
+                    <div class="onboarding-kicker">SECURE PARTY BRIEFING</div>
                     <h1 class="text-3xl font-bold mb-2">GENDER REVEAL</h1>
-                    <p class="text-gray-400 font-mono text-sm">INVESTIGATION PARTY</p>
+                    <p class="onboarding-subtitle font-mono text-sm">INVESTIGATION PARTY</p>
+                    <div class="onboarding-status">CASE STATUS: ACCEPTING AGENTS</div>
                 </div>
                 
                 <!-- New Player Registration -->
@@ -545,7 +762,7 @@
                 </div>
                 
                 <!-- Background Story -->
-                <div id="background-story-screen" class="hidden phase-transition">
+                <div id="background-story-screen" class="hidden phase-transition investigation-phase">
                     <div class="evidence-board p-6 rounded-lg text-center">
                         <h2 class="text-xl font-bold mb-4 font-mono story-heading">CASE BRIEFING</h2>
                         <p class="text-lg story-body leading-relaxed mb-4">
@@ -569,7 +786,7 @@
                 </div>
                 
                 <!-- Game 1 Rules -->
-                <div id="game1-rules-screen" class="hidden phase-transition">
+                <div id="game1-rules-screen" class="hidden phase-transition investigation-phase">
                     <div class="evidence-board p-6 rounded-lg">
                         <h2 class="text-xl font-bold mb-4 font-mono text-orange-500">PHASE 1: TESTING 123!</h2>
                         <div class="space-y-4">
@@ -590,7 +807,7 @@
                 </div>
                 
                 <!-- Game 1 Quiz -->
-                <div id="game1-quiz-screen" class="hidden phase-transition">
+                <div id="game1-quiz-screen" class="hidden phase-transition investigation-phase">
                     <div class="mb-4">
                         <div class="flex justify-between items-center mb-2">
                             <span class="font-mono text-sm text-gray-400">SCORE</span>
@@ -620,7 +837,7 @@
                 </div>
                 
                 <!-- Game 1 Settlement -->
-                <div id="game1-settle-screen" class="hidden phase-transition">
+                <div id="game1-settle-screen" class="hidden phase-transition investigation-phase">
                     <div class="evidence-board p-6 rounded-lg text-center">
                         <h2 class="text-2xl font-bold mb-4 font-mono text-orange-500">TESTING 123! COMPLETE</h2>
                         <div class="mb-6">
@@ -639,7 +856,7 @@
                 </div>
                 
                 <!-- Game 2 Rules -->
-                <div id="game2-rules-screen" class="hidden phase-transition">
+                <div id="game2-rules-screen" class="hidden phase-transition investigation-phase">
                     <div class="evidence-board p-6 rounded-lg">
                         <h2 class="text-xl font-bold mb-4 font-mono text-orange-500">PHASE 2: DO YOU BELIEVE IT?</h2>
                         <div class="space-y-4">
@@ -660,7 +877,7 @@
                 </div>
                 
                 <!-- Game 2 Bingo -->
-                <div id="game2-bingo-screen" class="hidden phase-transition">
+                <div id="game2-bingo-screen" class="hidden phase-transition investigation-phase">
                     <div class="mb-4">
                         <div class="flex justify-between items-center">
                             <span class="font-mono text-sm text-gray-400">LINES COMPLETED</span>
@@ -679,7 +896,7 @@
                 </div>
                 
                 <!-- Game 2 Settlement -->
-                <div id="game2-settle-screen" class="hidden phase-transition">
+                <div id="game2-settle-screen" class="hidden phase-transition investigation-phase">
                     <div class="evidence-board p-6 rounded-lg text-center">
                         <h2 class="text-2xl font-bold mb-4 font-mono text-orange-500">DO YOU BELIEVE IT? COMPLETE</h2>
                         <div class="mb-6">
@@ -694,7 +911,7 @@
                 </div>
                 
                 <!-- Game 3 Rules -->
-                <div id="game3-rules-screen" class="hidden phase-transition">
+                <div id="game3-rules-screen" class="hidden phase-transition investigation-phase">
                     <div class="evidence-board p-6 rounded-lg">
                         <h2 class="text-xl font-bold mb-4 font-mono text-orange-500">PHASE 3: TEAM BATTLE</h2>
                         <div class="space-y-4">
@@ -711,7 +928,7 @@
                 </div>
                 
                 <!-- Game 3 Team Selection -->
-                <div id="game3-team-screen" class="hidden phase-transition">
+                <div id="game3-team-screen" class="hidden phase-transition investigation-phase">
                     <div class="evidence-board p-6 rounded-lg text-center">
                         <h2 class="text-xl font-bold mb-6 font-mono text-orange-500">CHOOSE YOUR TEAM</h2>
                         <div class="grid grid-cols-2 gap-4">
@@ -730,7 +947,7 @@
                 </div>
                 
                 <!-- Final Choice -->
-                <div id="final-choice-screen" class="hidden phase-transition">
+                <div id="final-choice-screen" class="hidden phase-transition investigation-phase">
                     <div class="evidence-board p-6 rounded-lg text-center">
                         <h2 class="text-xl font-bold mb-6 font-mono text-orange-500">FINAL PREDICTION</h2>
                         <p class="text-gray-400 mb-6">根據你所收集既線索，作出最終判斷</p>
