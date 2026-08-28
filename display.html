@@ -782,7 +782,7 @@
             </div>
             
             <!-- Grand Reveal Screen -->
-            <div id="grand-reveal-screen" class="hidden phase-transition">
+            <div id="grand-reveal-screen" class="hidden">
                 <!-- Shown while waiting for the host to press START GRAND REVEAL -->
                 <div id="reveal-waiting" class="hidden text-center">
                     <div class="tv-heading mb-4 font-mono text-orange-500">FINAL COUNTDOWN STANDING BY</div>
@@ -1617,7 +1617,7 @@
             if (revealConfettiAnimId) cancelAnimationFrame(revealConfettiAnimId);
             fadeOutEpicBGM(300);
             
-            revealScreenEl.className = 'phase-transition';
+            revealScreenEl.className = '';
             revealScreenEl.style.backgroundPosition = '50% 50%';
             
             document.getElementById('reveal-waiting').classList.add('hidden');
