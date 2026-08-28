@@ -825,6 +825,7 @@
         let commonQuizQuestions = [];
         let questionsLoaded = false;
         let commonQuizTimerInterval = null;
+        let commonQuizTimerStartTimeout = null;
         let lastCommonQuizView = '';
         let myCommonAnswer = null;
         let currentQuizIndex = 0;
@@ -1503,12 +1504,12 @@
         
         function startQuizTimer() {
             stopQuizTimer();
-            quizTimer.classList.remove('hidden');
             
             // Sync with the host: count down from when the host started the countdown,
             // so reloads / late joiners see the correct remaining time
             const startedAt = gameState.countdown_started_at || Date.now();
             const duration = window.CONFIG.game1.commonQuizTimeout;
+            const startDelay = Math.max(0, startedAt - Date.now());
             
             const tick = () => {
                 const elapsed = (Date.now() - startedAt) / 1000;
@@ -1522,14 +1523,28 @@
                 }
             };
             
-            tick();
-            commonQuizTimerInterval = setInterval(tick, 250);
+            const beginTimer = () => {
+                commonQuizTimerStartTimeout = null;
+                quizTimer.classList.remove('hidden');
+                tick();
+                commonQuizTimerInterval = setInterval(tick, 250);
+            };
+
+            if (startDelay > 0) {
+                commonQuizTimerStartTimeout = setTimeout(beginTimer, startDelay);
+            } else {
+                beginTimer();
+            }
         }
         
         function stopQuizTimer() {
             if (commonQuizTimerInterval) {
                 clearInterval(commonQuizTimerInterval);
                 commonQuizTimerInterval = null;
+            }
+            if (commonQuizTimerStartTimeout) {
+                clearTimeout(commonQuizTimerStartTimeout);
+                commonQuizTimerStartTimeout = null;
             }
             quizTimer.classList.add('hidden');
         }

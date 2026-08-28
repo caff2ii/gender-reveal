@@ -863,13 +863,16 @@
         }
         
         function startQuizCountdown() {
-            // Step 0 -> 1: reveal the options and start the countdown
+            // Let all four options finish their staggered reveal before the answer timer starts.
             const currentRevealStage = gameState.common_reveal_stage || 0;
             if (currentRevealStage !== 0) return;
+
+            const revealStepMs = gameState.option_reveal_step_ms || window.CONFIG.game1.optionRevealStepMs;
+            const optionRevealDurationMs = (3 * revealStepMs) + 350;
             
             database.ref(window.CONFIG.dbPaths.gameState).update({
                 common_reveal_stage: 1,
-                countdown_started_at: firebase.database.ServerValue.TIMESTAMP
+                countdown_started_at: Date.now() + optionRevealDurationMs
             });
         }
         
