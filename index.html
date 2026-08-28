@@ -1411,10 +1411,29 @@
             if (!currentPlayer) return;
             
             document.getElementById('final-score').textContent = currentPlayer.score || 0;
-            // Rank would be calculated by host, we'll display it when available
             document.getElementById('final-rank').textContent = 'Calculating...';
+            renderFinalRank();
             
             renderClueRewardDisplay('clue-reward');
+        }
+        
+        // Rank isn't stored per-player - derive it by fetching all scores and
+        // sorting, since nothing else in index.html loads the full player list.
+        function renderFinalRank() {
+            if (!currentPlayer || !currentPlayer.id) return;
+            
+            database.ref(window.CONFIG.dbPaths.players).once('value', (snapshot) => {
+                const allPlayers = snapshot.val() || {};
+                const ranked = Object.keys(allPlayers)
+                    .map(id => ({ id, score: allPlayers[id].score || 0 }))
+                    .sort((a, b) => b.score - a.score);
+                const position = ranked.findIndex(p => p.id === currentPlayer.id);
+                const rankEl = document.getElementById('final-rank');
+                rankEl.textContent = position >= 0 ? `#${position + 1} / ${ranked.length}` : '-';
+            }, (error) => {
+                console.warn('Could not calculate rank:', error);
+                document.getElementById('final-rank').textContent = '-';
+            });
         }
         
         // Fetch the player's latest unlocked clues from Firebase and show how many
