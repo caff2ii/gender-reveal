@@ -782,6 +782,12 @@
             
             <!-- Grand Reveal Screen -->
             <div id="grand-reveal-screen" class="hidden phase-transition">
+                <!-- Shown while waiting for the host to press START GRAND REVEAL -->
+                <div id="reveal-waiting" class="hidden text-center">
+                    <div class="tv-heading mb-4 font-mono text-orange-500">FINAL COUNTDOWN STANDING BY</div>
+                    <div class="tv-subheading text-gray-400 animate-pulse">等待主持人開始最終揭曉...</div>
+                </div>
+                
                 <!-- SVG motion-blur filter used on the final BOY!/GIRL! word as it flies in -->
                 <svg style="position: absolute; width: 0; height: 0;" aria-hidden="true" focusable="false">
                     <filter id="motion-blur-filter" x="-50%" y="-50%" width="200%" height="200%">
@@ -988,7 +994,7 @@
                     break;
                 case 'GRAND_REVEAL':
                     document.getElementById('grand-reveal-screen').classList.remove('hidden');
-                    startGrandReveal();
+                    enterGrandRevealPhase();
                     break;
             }
         }
@@ -1613,6 +1619,8 @@
             revealScreenEl.className = 'phase-transition';
             revealScreenEl.style.backgroundPosition = '50% 50%';
             
+            document.getElementById('reveal-waiting').classList.add('hidden');
+            
             const boyGroup = document.getElementById('boy-group');
             const girlGroup = document.getElementById('girl-group');
             boyGroup.style.transform = 'translateX(0px)';
@@ -1646,6 +1654,28 @@
             if (blurVal) blurVal.setAttribute('stdDeviation', '0, 0');
             
             confetti.reset();
+        }
+        
+        // Only the host's explicit START GRAND REVEAL press (reveal_triggered_at) should
+        // start the countdown/animation - simply entering this phase (Next Phase or a
+        // quick-jump) must not auto-play it.
+        let lastHandledRevealTrigger = null;
+        
+        function enterGrandRevealPhase() {
+            const revealWaiting = document.getElementById('reveal-waiting');
+            
+            if (!gameState.reveal_triggered_at) {
+                lastHandledRevealTrigger = null;
+                cleanRevealScreen();
+                revealWaiting.classList.remove('hidden');
+                return;
+            }
+            
+            if (lastHandledRevealTrigger === gameState.reveal_triggered_at) return;
+            lastHandledRevealTrigger = gameState.reveal_triggered_at;
+            
+            revealWaiting.classList.add('hidden');
+            startGrandReveal();
         }
         
         function startGrandReveal() {

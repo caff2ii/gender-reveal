@@ -717,7 +717,11 @@
                 <!-- Grand Reveal -->
                 <div id="grand-reveal-screen" class="hidden phase-transition">
                     <div class="text-center">
-                        <div id="reveal-countdown" class="countdown-timer text-orange-500 mb-8">5</div>
+                        <div id="reveal-waiting" class="hidden">
+                            <div class="text-2xl font-bold mb-2 font-mono text-orange-500">最終揭曉準備中</div>
+                            <p class="text-gray-400 animate-pulse">等待主持人開始最終揭曉...</p>
+                        </div>
+                        <div id="reveal-countdown" class="countdown-timer text-orange-500 mb-8 hidden">5</div>
                         <div id="reveal-result" class="hidden">
                             <div class="text-4xl font-bold mb-4">IT'S A</div>
                             <div id="reveal-gender" class="text-6xl font-bold mb-6">-</div>
@@ -1105,7 +1109,7 @@
                     break;
                 case 'GRAND_REVEAL':
                     document.getElementById('grand-reveal-screen').classList.remove('hidden');
-                    startRevealCountdown();
+                    enterGrandRevealPhase();
                     break;
             }
         }
@@ -1857,21 +1861,58 @@
             document.getElementById('image-lightbox-text').textContent = '';
         }
         
-        function startRevealCountdown() {
-            let count = 5;
-            revealCountdown.textContent = count;
-            revealResult.classList.add('hidden');
+        // Only the host's explicit START GRAND REVEAL press (reveal_triggered_at) should
+        // start the countdown - simply entering this phase must show a waiting state instead.
+        let lastHandledRevealTrigger = null;
+        let revealCountdownTimer = null;
+        
+        function enterGrandRevealPhase() {
+            const revealWaiting = document.getElementById('reveal-waiting');
             
-            const countdown = setInterval(() => {
-                count--;
-                if (count > 0) {
-                    revealCountdown.textContent = count;
-                } else {
-                    clearInterval(countdown);
+            if (!gameState.reveal_triggered_at) {
+                lastHandledRevealTrigger = null;
+                if (revealCountdownTimer) {
+                    clearInterval(revealCountdownTimer);
+                    revealCountdownTimer = null;
+                }
+                revealCountdown.classList.add('hidden');
+                revealResult.classList.add('hidden');
+                revealWaiting.classList.remove('hidden');
+                return;
+            }
+            
+            if (lastHandledRevealTrigger === gameState.reveal_triggered_at) return;
+            lastHandledRevealTrigger = gameState.reveal_triggered_at;
+            
+            revealWaiting.classList.add('hidden');
+            startRevealCountdown();
+        }
+        
+        function startRevealCountdown() {
+            revealResult.classList.add('hidden');
+            revealCountdown.classList.remove('hidden');
+            
+            // Anchor to the host's trigger timestamp (not a fresh local 5) so every
+            // phone counts down in sync, even one that loads a moment later
+            const startedAt = gameState.reveal_triggered_at || Date.now();
+            const duration = window.CONFIG.reveal.countdownSeconds;
+            
+            const tick = () => {
+                const elapsed = (Date.now() - startedAt) / 1000;
+                const remaining = Math.max(0, Math.ceil(duration - elapsed));
+                revealCountdown.textContent = remaining;
+                
+                if (remaining <= 0) {
+                    clearInterval(revealCountdownTimer);
+                    revealCountdownTimer = null;
                     revealCountdown.classList.add('hidden');
                     showRevealResult();
                 }
-            }, 1000);
+            };
+            
+            if (revealCountdownTimer) clearInterval(revealCountdownTimer);
+            tick();
+            revealCountdownTimer = setInterval(tick, 250);
         }
         
         function showRevealResult() {

@@ -789,6 +789,13 @@
                 updates.game2_clues_distributed = true;
             }
             
+            // Entering this phase must only show the "waiting" screen - the countdown/
+            // animation should only ever start from an explicit START GRAND REVEAL press,
+            // never merely from arriving here (Next Phase or a quick-jump).
+            if (phase === 'GRAND_REVEAL') {
+                updates.reveal_triggered_at = null;
+            }
+            
             database.ref(window.CONFIG.dbPaths.gameState).update(updates);
         }
         
