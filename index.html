@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>解謎派對 — 玩家端</title>
+
+<script src="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+
+<script src="https://cdn.jsdelivr.net/npm/firebase@10.8.0/firebase-app-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@10.8.0/firebase-database-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/howler@2.2.4/dist/howler.min.js"></script>
+<script src="config.js"></script>
+
+<style>
+  :root{
+    --bg-base:#141020;
+    --bg-panel:#1e1830;
+    --bg-panel-raised:#2a2340;
+    --line:#3a3155;
+    --text-main:#f0ecf9;
+    --text-dim:#a89dc4;
+    --accent-gold:#e8b84d;
+    --accent-violet:#9b7ff0;
+    --accent-red:#ef5555;
+    --accent-green:#3ecf7a;
+    --accent-boy:#4d8fe8;
+    --accent-girl:#e85fa0;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{overscroll-behavior-y:none;}
+  body{
+    background:
+      radial-gradient(ellipse 500px 400px at 50% -10%, rgba(155,127,240,0.15), transparent 60%),
+      var(--bg-base);
+    color:var(--text-main);
+    font-family:'Noto Sans TC','Space Grotesk',sans-serif;
+    min-height:100vh;
+    max-width:520px;
+    margin:0 auto;
+  }
+  .font-display{font-family:'Space Grotesk','Noto Sans TC',sans-serif;}
+  .font-mono{font-family:'IBM Plex Mono',monospace;}
+  .panel{ background:var(--bg-panel); border:1px solid var(--line); border-radius:16px; }
+  .field{
+    background:var(--bg-panel-raised); border:1px solid var(--line); border-radius:10px;
+    padding:12px 14px; color:var(--text-main); width:100%; font-size:16px;
+  }
+  .field:focus{outline:none; border-color:var(--accent-violet);}
+  .btn{
+    padding:14px 20px; border-radius:12px; font-weight:600; font-size:16px;
+    transition:transform .1s ease, opacity .15s ease; cursor:pointer; border:none;
+    font-family:'Space Grotesk','Noto Sans TC',sans-serif; width:100%;
+  }
+  .btn:active{transform:scale(0.97);}
+  .btn:disabled{opacity:.35;}
+  .btn-gold{background:var(--accent-gold); color:#2a1c02;}
+  .btn-violet{background:var(--accent-violet); color:#180e35;}
+  .btn-outline{background:transparent; border:1px solid var(--line); color:var(--text-main);}
+  .btn-boy{background:var(--accent-boy); color:#031126;}
+  .btn-girl{background:var(--accent-girl); color:#2a0517;}
+  .option-btn{
+    background:var(--bg-panel-raised); border:1.5px solid var(--line); border-radius:12px;
+    padding:14px 16px; text-align:left; width:100%; color:var(--text-main); font-size:15px;
+    transition:all .15s ease;
+  }
+  .option-btn.is-correct{background:rgba(62,207,122,0.18); border-color:var(--accent-green); color:var(--accent-green);}
+  .option-btn.is-wrong{background:rgba(239,85,85,0.18); border-color:var(--accent-red); color:var(--accent-red);}
+  .option-btn.is-selected:not(.is-correct):not(.is-wrong){border-color:var(--accent-violet);}
+  .bingo-cell{
+    aspect-ratio:1; display:flex; align-items:center; justify-content:center;
+    background:var(--bg-panel-raised); border:1.5px solid var(--line); border-radius:10px;
+    font-size:11px; text-align:center; padding:4px; line-height:1.3; cursor:pointer;
+    transition:all .15s ease;
+  }
+  .bingo-cell.is-marked{background:rgba(155,127,240,0.25); border-color:var(--accent-violet); color:var(--accent-violet); font-weight:600;}
+  .bingo-cell.is-glow{animation:glow 1s ease-in-out infinite;}
+  @keyframes glow{
+    0%,100%{box-shadow:0 0 0 0 rgba(232,184,77,0.6); border-color:var(--accent-gold);}
+    50%{box-shadow:0 0 0 6px rgba(232,184,77,0); border-color:var(--accent-gold);}
+  }
+  .fade-in{animation:fadeIn .4s ease both;}
+  @keyframes fadeIn{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+  .clue-slot{
+    aspect-ratio:1; border-radius:10px; display:flex; align-items:center; justify-content:center;
+    font-size:11px; text-align:center; padding:6px; border:1.5px dashed var(--line); color:var(--text-dim);
+  }
+  .clue-slot.is-unlocked{border-style:solid; border-color:var(--accent-gold); background:rgba(232,184,77,0.1); color:var(--text-main);}
+  .tab-pill{
+    padding:8px 14px; border-radius:999px; font-size:13px; font-weight:600; cursor:pointer;
+    background:var(--bg-panel-raised); color:var(--text-dim); border:1px solid var(--line);
+  }
+  .tab-pill.is-active{background:var(--accent-violet); color:#180e35; border-color:var(--accent-violet);}
+</style>
+</head>
+<body class="p-4">
+
+<div id="app" class="pb-10"></div>
+
+<script>
+firebase.initializeApp(CONFIG.firebaseConfig);
+const db = firebase.database();
+
+let playerId = localStorage.getItem('grp_player_id');
+let playerPin = localStorage.getItem('grp_player_pin');
+let playerData = null;
+let gameState = {};
+let groupQuestionsCache = null;
+let commonQuestionsCache = null;
+let exclusiveIndex = 0;
+let countdownTimer = null;
+
+const app = document.getElementById('app');
+
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
+}
+
+/* ============================================================
+   啟動流程
+============================================================ */
+function boot(){
+  if (playerId){
+    db.ref(`players/${playerId}`).get().then(snap => {
+      if (snap.exists()){
+        playerData = snap.val();
+        attachListeners();
+      } else {
+        localStorage.removeItem('grp_player_id');
+        localStorage.removeItem('grp_player_pin');
+        playerId = null;
+        renderOnboardingGate();
+      }
+    });
+  } else {
+    renderOnboardingGate();
+  }
+}
+
+function attachListeners(){
+  db.ref(`players/${playerId}`).on('value', snap => {
+    playerData = snap.val();
+    if (!playerData){
+      localStorage.removeItem('grp_player_id');
+      localStorage.removeItem('grp_player_pin');
+      location.reload();
+      return;
+    }
+    render();
+  });
+  db.ref('game_state').on('value', snap => {
+    gameState = snap.val() || {};
+    render();
+  });
+}
+
+/* ============================================================
+   Onboarding：新玩家 / 舊玩家
+============================================================ */
+function renderOnboardingGate(){
+  app.innerHTML = `
+    <div class="fade-in pt-10 text-center">
+      <p class="font-mono text-xs text-[var(--text-dim)] tracking-widest uppercase mb-2">Case File — Gender Reveal</p>
+      <h1 class="font-display text-2xl font-bold mb-8">歡迎，偵探</h1>
+      <div class="panel p-5 mb-4 text-left">
+        <h2 class="font-display font-semibold mb-3">新玩家登記</h2>
+        <input id="new-name" class="field mb-3" placeholder="請輸入你的暱稱">
+        <label class="text-xs font-mono text-[var(--text-dim)] mb-2 block">選擇你的 Friend Group</label>
+        <select id="new-group" class="field mb-4">
+          ${Object.entries(CONFIG.groups).map(([id,name]) => `<option value="${id}">${escapeHtml(name)}</option>`).join('')}
+        </select>
+        <button onclick="registerNewPlayer()" class="btn btn-gold">開始遊戲</button>
+      </div>
+      <div class="panel p-5 text-left">
+        <h2 class="font-display font-semibold mb-3">舊玩家登入</h2>
+        <input id="login-pin" type="tel" maxlength="4" class="field mb-3 text-center tracking-[6px]" placeholder="輸入 4 位 PIN 碼">
+        <button onclick="loginWithPin()" class="btn btn-outline">登入</button>
+        <p id="login-error" class="text-[var(--accent-red)] text-xs mt-2 hidden">找不到此 PIN 碼，請確認再試一次。</p>
+      </div>
+    </div>`;
+}
+
+async function generateUniquePin(){
+  const snap = await db.ref('players').get();
+  const players = snap.val() || {};
+  const existingPins = new Set(Object.values(players).map(p => p.pin));
+  let pin;
+  do {
+    pin = String(Math.floor(1000 + Math.random()*9000));
+  } while (existingPins.has(pin));
+  return pin;
+}
+
+async function registerNewPlayer(){
+  const name = document.getElementById('new-name').value.trim();
+  const group = document.getElementById('new-group').value;
+  if (!name){ alert('請輸入暱稱。'); return; }
+
+  const pin = await generateUniquePin();
+  const newRef = db.ref('players').push();
+  const newPlayer = {
+    pin, name, group,
+    score: 0,
+    bingo_board: [],
+    bingo_lines: 0,
+    bingo_completed_at: null,
+    team: '',
+    final_prediction: '',
+    unlocked_clues: [],
+    exclusive_answered: {},
+    common_answered: {}
+  };
+  await newRef.set(newPlayer);
+  playerId = newRef.key;
+  playerPin = pin;
+  localStorage.setItem('grp_player_id', playerId);
+  localStorage.setItem('grp_player_pin', pin);
+  playerData = newPlayer;
+  attachListeners();
+}
+
+async function loginWithPin(){
+  const pin = document.getElementById('login-pin').value.trim();
+  const snap = await db.ref('players').get();
+  const players = snap.val() || {};
+  const foundId = Object.keys(players).find(id => players[id].pin === pin);
+  if (!foundId){
+    document.getElementById('login-error').classList.remove('hidden');
+    return;
+  }
+  playerId = foundId;
+  playerPin = pin;
+  localStorage.setItem('grp_player_id', playerId);
+  localStorage.setItem('grp_player_pin', pin);
+  playerData = players[foundId];
+  attachListeners();
+}
+
+/* ============================================================
+   主渲染路由
+============================================================ */
+function render(){
+  if (!playerData) return;
+  const phase = gameState.current_phase || 'ONBOARDING';
+
+  switch(phase){
+    case 'ONBOARDING': renderWaiting('已登記完成，請等待主持人開始遊戲。'); break;
+    case 'BACKGROUND_STORY': renderBackgroundStory(); break;
+    case 'GAME1_RULES': renderGame1Rules(); break;
+    case 'GAME1_QUIZ': renderGame1Quiz(); break;
+    case 'GAME1_SETTLE': renderSettleScreen('Game 1 結算中', '請留意大螢幕排行榜，你的線索庫已同步更新。'); break;
+    case 'GAME2_RULES': renderGame2Rules(); break;
+    case 'GAME2_BINGO': renderGame2Bingo(); break;
+    case 'GAME2_SETTLE': renderSettleScreen('Game 2 結算中', 'Bingo 結果已公布，你的線索庫已同步更新。'); break;
+    case 'GAME3_RULES': renderGame3Rules(); break;
+    case 'GAME3_TEAM_SELECT': renderGame3TeamSelect(); break;
+    case 'FINAL_CHOICE': renderFinalChoice(); break;
+    case 'GRAND_REVEAL': renderGrandRevealWaiting(); break;
+    default: renderWaiting('請留意大螢幕。');
+  }
+}
+
+function headerBar(subtitle){
+  const clueCount = (playerData.unlocked_clues || []).length;
+  return `
+    <div class="flex justify-between items-center mb-5">
+      <div>
+        <p class="font-mono text-xs text-[var(--text-dim)]">${escapeHtml(playerData.name)} · ${escapeHtml(CONFIG.groups[playerData.group]||'')}</p>
+        ${subtitle ? `<p class="font-display font-semibold text-sm text-[var(--accent-gold)] mt-1">${subtitle}</p>` : ''}
+      </div>
+      <button onclick="renderClueLibraryModal()" class="tab-pill">🔍 線索 ${clueCount}/9</button>
+    </div>`;
+}
+
+function renderWaiting(msg){
+  app.innerHTML = `
+    <div class="fade-in pt-16 text-center">
+      ${headerBar()}
+      <div class="panel p-8 mt-10">
+        <p class="font-display text-lg">${escapeHtml(msg)}</p>
+      </div>
+    </div>`;
+}
+
+function renderSettleScreen(title, msg){
+  app.innerHTML = `
+    <div class="fade-in pt-16 text-center">
+      ${headerBar()}
+      <div class="panel p-8 mt-10">
+        <p class="font-display text-lg text-[var(--accent-gold)] mb-2">${escapeHtml(title)}</p>
+        <p class="text-sm text-[var(--text-dim)]">${escapeHtml(msg)}</p>
+      </div>
+    </div>`;
+}
+
+/* ============================================================
+   開場背景故事
+============================================================ */
+function renderBackgroundStory(){
+  const story = "大家而家會化身成為一個偵探，參加呢個派對既目標就係去揭破一個驚天大秘密：『BB 既性別』。係呢個過程入面，你將會受到不同既考驗，鬥智鬥力，最後到達決戰之地，帶住你認為係岩既答案，與共同答案既同伴連成一線，對抗另一隊自認為岩既隊伍。到底係男仔，定係女仔呢？一切一切就等你黎揭曉啦！！！！";
+  app.innerHTML = `
+    <div class="fade-in pt-6">
+      ${headerBar('開場故事')}
+      <div class="panel p-6">
+        <p class="text-base leading-relaxed">${escapeHtml(story)}</p>
+      </div>
+    </div>`;
+}
+
+function renderGame1Rules(){
+  app.innerHTML = `
+    <div class="fade-in pt-6">
+      ${headerBar('Game 1 規則')}
+      <div class="panel p-6">
+        <h2 class="font-display font-bold text-lg mb-3">競速問答</h2>
+        <p class="text-sm leading-relaxed text-[var(--text-dim)]">
+          先回答 3 條屬於你 Friend Group 嘅專屬題（答啱固定得 1000 分）。
+          之後全場一齊進行 5 條共同題，答啱基礎分 1000 分，越快撳越多加分！
+        </p>
+      </div>
+    </div>`;
+}
+
+function renderGame2Rules(){
+  app.innerHTML = `
+    <div class="fade-in pt-6">
+      ${headerBar('Game 2 規則')}
+      <div class="panel p-6">
+        <h2 class="font-display font-bold text-lg mb-3">迷信 Bingo</h2>
+        <p class="text-sm leading-relaxed text-[var(--text-dim)]">
+          你將會獲得一個 3x3 Bingo 板。主持人會不斷抽出迷信句子，
+          如果你塊板上有嗰句，記得撳格仔畫線！連滿 2 條線就達標。
+        </p>
+      </div>
+    </div>`;
+}
+
+function renderGame3Rules(){
+  app.innerHTML = `
+    <div class="fade-in pt-6">
+      ${headerBar('Game 3 規則')}
+      <div class="panel p-6">
+        <h2 class="font-display font-bold text-lg mb-3">Switch 對決</h2>
+        <p class="text-sm leading-relaxed text-[var(--text-dim)]">
+          請先揀你支持嘅陣營：Team Boy 或 Team Girl。
+          之後現場會用 Nintendo Switch 進行對決，勝方全員會獲得額外線索！
+        </p>
+      </div>
+    </div>`;
+}
+
+/* ============================================================
+   Game 1：專屬題 + 共同題
+============================================================ */
+async function loadGroupQuestions(){
+  if (groupQuestionsCache) return groupQuestionsCache;
+  const snap = await db.ref(`questions/group_quiz/${playerData.group}`).get();
+  const obj = snap.val() || {};
+  groupQuestionsCache = Object.entries(obj).sort((a,b)=> a[0].localeCompare(b[0])).slice(0,3);
+  return groupQuestionsCache;
+}
+async function loadCommonQuestions(){
+  if (commonQuestionsCache) return commonQuestionsCache;
+  const snap = await db.ref('questions/common_quiz').get();
+  const obj = snap.val() || {};
+  commonQuestionsCache = Object.entries(obj).sort((a,b)=> a[0].localeCompare(b[0])).slice(0,5);
+  return commonQuestionsCache;
+}
+
+async function renderGame1Quiz(){
+  const stage = gameState.game1_stage || 'EXCLUSIVE';
+  if (stage === 'EXCLUSIVE') renderExclusiveQuiz();
+  else renderCommonQuiz();
+}
+
+async function renderExclusiveQuiz(){
+  const questions = await loadGroupQuestions();
+  const answered = playerData.exclusive_answered || {};
+
+  if (questions.length === 0){
+    app.innerHTML = `${headerBar('專屬題')}<div class="panel p-6"><p class="text-sm text-[var(--text-dim)]">暫時未有題目，請等待主持人。</p></div>`;
+    return;
+  }
+
+  const unansweredIdx = questions.findIndex(([qId]) => !answered[qId]);
+  if (unansweredIdx === -1){
+    app.innerHTML = `
+      <div class="fade-in pt-6">${headerBar('專屬題')}
+        <div class="panel p-6 text-center">
+          <p class="font-display font-semibold text-[var(--accent-green)] mb-2">✓ 專屬題已全部完成</p>
+          <p class="text-sm text-[var(--text-dim)]">請等待主持人開始共同題環節。</p>
+        </div>
+      </div>`;
+    return;
+  }
+
+  const [qId, q] = questions[unansweredIdx];
+  app.innerHTML = `
+    <div class="fade-in pt-6">
+      ${headerBar(`專屬題 ${unansweredIdx+1} / ${questions.length}`)}
+      <div class="panel p-6">
+        <p class="font-display text-lg mb-5">${escapeHtml(q.q)}</p>
+        <div class="space-y-3" id="ex-options">
+          ${(q.options||[]).map((opt,i) => `<button class="option-btn" onclick="answerExclusive('${qId}', ${i}, ${q.answer})">${escapeHtml(opt)}</button>`).join('')}
+        </div>
+      </div>
+    </div>`;
+}
+
+async function answerExclusive(qId, chosenIndex, correctIndex){
+  const buttons = document.querySelectorAll('#ex-options .option-btn');
+  buttons.forEach((b,i) => {
+    b.disabled = true;
+    if (i === correctIndex) b.classList.add('is-correct');
+    else if (i === chosenIndex) b.classList.add('is-wrong');
+  });
+
+  const isCorrect = chosenIndex === correctIndex;
+  const updates = {};
+  updates[`players/${playerId}/exclusive_answered/${qId}`] = true;
+  await db.ref().update(updates);
+  if (isCorrect){
+    await db.ref(`players/${playerId}/score`).transaction(cur => (cur||0) + CONFIG.game.exclusiveQuizFixedScore);
+  }
+  setTimeout(() => renderExclusiveQuiz(), 900);
+}
+
+async function renderCommonQuiz(){
+  const questions = await loadCommonQuestions();
+  const idx = gameState.current_question_index || 0;
+  const stageNum = gameState.common_reveal_stage || 0;
+
+  if (questions.length === 0 || idx >= questions.length){
+    app.innerHTML = `
+      <div class="fade-in pt-6">${headerBar('共同題')}
+        <div class="panel p-6 text-center">
+          <p class="font-display font-semibold text-[var(--accent-green)] mb-2">✓ 共同題環節完成</p>
+          <p class="text-sm text-[var(--text-dim)]">請等待主持人公布結算。</p>
+        </div>
+      </div>`;
+    return;
+  }
+
+  const [qId, q] = questions[idx];
+  const answeredMap = playerData.common_answered || {};
+  const alreadyAnswered = answeredMap[qId];
+
+  let bodyHtml = `<p class="text-[var(--text-dim)] text-sm">等待主持人顯示題目…</p>`;
+  if (stageNum >= 1){
+    bodyHtml = `<p class="font-display text-lg mb-5">${escapeHtml(q.q)}</p><div class="space-y-3" id="common-options">`;
+    (q.options||[]).forEach((opt,i) => {
+      if (stageNum >= i+2){
+        const disabledAttr = (stageNum < 6 || alreadyAnswered) ? 'disabled' : '';
+        const selectedClass = alreadyAnswered && alreadyAnswered.chosen === i ? (alreadyAnswered.correct ? 'is-correct' : 'is-wrong') : '';
+        bodyHtml += `<button class="option-btn ${selectedClass}" ${disabledAttr} onclick="answerCommon('${qId}', ${i}, ${q.answer})">${escapeHtml(opt)}</button>`;
+      }
+    });
+    bodyHtml += `</div>`;
+  }
+
+  let countdownHtml = '';
+  if (stageNum === 6 && !alreadyAnswered){
+    countdownHtml = `<p id="countdown-label" class="font-mono text-2xl text-center text-[var(--accent-gold)] mt-4">--</p>`;
+  }
+
+  app.innerHTML = `
+    <div class="fade-in pt-6">
+      ${headerBar(`共同題 ${idx+1} / ${questions.length}`)}
+      <div class="panel p-6">
+        ${bodyHtml}
+        ${countdownHtml}
+        ${alreadyAnswered ? '<p class="text-center text-sm text-[var(--text-dim)] mt-4">已作答，請等待下一題。</p>' : ''}
+      </div>
+    </div>`;
+
+  if (stageNum === 6 && !alreadyAnswered){
+    startCountdownDisplay();
+  }
+}
+
+function startCountdownDisplay(){
+  if (countdownTimer) clearInterval(countdownTimer);
+  const startAt = gameState.countdown_start_at;
+  if (!startAt) return;
+  const total = CONFIG.game.commonQuizCountdownSeconds;
+  countdownTimer = setInterval(() => {
+    const remaining = Math.max(0, total - Math.floor((Date.now() - startAt)/1000));
+    const el = document.getElementById('countdown-label');
+    if (el) el.textContent = remaining + 's';
+    if (remaining <= 0){
+      clearInterval(countdownTimer);
+      document.querySelectorAll('#common-options .option-btn').forEach(b => b.disabled = true);
+    }
+  }, 200);
+}
+
+async function answerCommon(qId, chosenIndex, correctIndex){
+  if (countdownTimer) clearInterval(countdownTimer);
+  const startAt = gameState.countdown_start_at || Date.now();
+  const elapsedSec = (Date.now() - startAt) / 1000;
+  const remainingSec = Math.max(0, CONFIG.game.commonQuizCountdownSeconds - elapsedSec);
+  const isCorrect = chosenIndex === correctIndex;
+  const points = isCorrect ? Math.round(CONFIG.game.commonQuizBaseScore + remainingSec * CONFIG.game.commonQuizTimeBonusPerSecond) : 0;
+
+  document.querySelectorAll('#common-options .option-btn').forEach((b,i) => {
+    b.disabled = true;
+    if (i === chosenIndex) b.classList.add(isCorrect ? 'is-correct' : 'is-wrong');
+  });
+
+  await db.ref(`players/${playerId}/common_answered/${qId}`).set({ chosen: chosenIndex, correct: isCorrect });
+  if (isCorrect){
+    await db.ref(`players/${playerId}/score`).transaction(cur => (cur||0) + points);
+  }
+}
+
+/* ============================================================
+   Game 2：Bingo
+============================================================ */
+async function ensureBingoBoard(){
+  if (playerData.bingo_board && playerData.bingo_board.length === 9) return playerData.bingo_board;
+  const snap = await db.ref('bingo_phrases').get();
+  const all = Object.values(snap.val() || {}).filter(Boolean);
+  const shuffled = all.slice().sort(() => Math.random() - 0.5);
+  const board = shuffled.slice(0,9);
+  while (board.length < 9) board.push('（句庫不足）');
+  await db.ref(`players/${playerId}/bingo_board`).set(board);
+  return board;
+}
+
+const BINGO_LINES = [
+  [0,1,2],[3,4,5],[6,7,8],
+  [0,3,6],[1,4,7],[2,5,8],
+  [0,4,8],[2,4,6]
+];
+
+function countBingoLines(marked){
+  return BINGO_LINES.filter(line => line.every(i => marked[i])).length;
+}
+
+async function renderGame2Bingo(){
+  const board = await ensureBingoBoard();
+  const marked = playerData.bingo_marked || {};
+  const currentPhrase = gameState.current_bingo_phrase || '';
+
+  app.innerHTML = `
+    <div class="fade-in pt-6">
+      ${headerBar('Bingo 進行中')}
+      <div class="panel p-4 mb-4 text-center">
+        <p class="font-mono text-xs text-[var(--text-dim)]">目前抽出</p>
+        <p class="font-display text-lg text-[var(--accent-gold)]">${escapeHtml(currentPhrase || '等待主持人抽句…')}</p>
+      </div>
+      <div class="grid grid-cols-3 gap-2" id="bingo-grid">
+        ${board.map((phrase,i) => {
+          const isMarked = !!marked[i];
+          const canGlow = !isMarked && currentPhrase && phrase === currentPhrase;
+          return `<div class="bingo-cell ${isMarked?'is-marked':''} ${canGlow?'is-glow':''}" onclick="toggleBingoCell(${i}, '${escapeHtml(phrase).replace(/'/g,"\\'")}')">${escapeHtml(phrase)}</div>`;
+        }).join('')}
+      </div>
+      <p class="text-center text-sm text-[var(--text-dim)] mt-4">已連 ${playerData.bingo_lines||0} 線</p>
+    </div>`;
+}
+
+async function toggleBingoCell(i, phrase){
+  const marked = { ...(playerData.bingo_marked || {}) };
+  if (marked[i]) delete marked[i];
+  else marked[i] = true;
+
+  const lines = countBingoLines(marked);
+  const updates = {
+    [`players/${playerId}/bingo_marked`]: marked,
+    [`players/${playerId}/bingo_lines`]: lines
+  };
+  if (lines >= CONFIG.game.bingoLinesToQualify && !playerData.bingo_completed_at){
+    updates[`players/${playerId}/bingo_completed_at`] = firebase.database.ServerValue.TIMESTAMP;
+  }
+  await db.ref().update(updates);
+}
+
+/* ============================================================
+   Game 3：站隊
+============================================================ */
+function renderGame3TeamSelect(){
+  const team = playerData.team;
+  app.innerHTML = `
+    <div class="fade-in pt-6">
+      ${headerBar('選擇陣營')}
+      <div class="panel p-6 text-center">
+        <p class="text-sm text-[var(--text-dim)] mb-6">你支持邊個陣營？（可留意現場 Switch 對決結果）</p>
+        <div class="flex gap-3">
+          <button onclick="selectTeam('BOY')" class="btn btn-boy ${team==='BOY'?'':''}">Team Boy</button>
+          <button onclick="selectTeam('GIRL')" class="btn btn-girl">Team Girl</button>
+        </div>
+        ${team ? `<p class="mt-4 text-sm">目前已選：<span class="font-semibold">${team === 'BOY' ? 'Team Boy' : 'Team Girl'}</span>（可隨時更改）</p>` : ''}
+      </div>
+    </div>`;
+}
+
+async function selectTeam(team){
+  await db.ref(`players/${playerId}/team`).set(team);
+}
+
+/* ============================================================
+   最終意向鎖定
+============================================================ */
+function renderFinalChoice(){
+  const locked = !!playerData.final_prediction;
+  app.innerHTML = `
+    <div class="fade-in pt-6">
+      ${headerBar('最終意向')}
+      <div class="panel p-6 text-center">
+        ${locked ? `
+          <p class="font-display text-lg mb-2">你已鎖定：<span class="font-bold">${playerData.final_prediction === 'BOY' ? 'Team Boy' : 'Team Girl'}</span></p>
+          <p class="text-xs text-[var(--text-dim)]">此選擇不可更改，請等待 Grand Reveal。</p>
+        ` : `
+          <p class="text-sm text-[var(--text-dim)] mb-6">根據你手上蒐集到嘅線索，作出最終判斷！此選擇一經確認不可更改。</p>
+          <div class="flex gap-3">
+            <button onclick="lockFinalPrediction('BOY')" class="btn btn-boy">鎖定 Team Boy</button>
+            <button onclick="lockFinalPrediction('GIRL')" class="btn btn-girl">鎖定 Team Girl</button>
+          </div>
+        `}
+      </div>
+      <button onclick="renderClueLibraryModal()" class="btn btn-outline mt-4">查看我的線索庫</button>
+    </div>`;
+}
+
+async function lockFinalPrediction(choice){
+  if (!confirm(`確認鎖定 ${choice === 'BOY' ? 'Team Boy' : 'Team Girl'}？此選擇不可更改。`)) return;
+  await db.ref(`players/${playerId}/final_prediction`).set(choice);
+}
+
+/* ============================================================
+   Grand Reveal 等待畫面
+============================================================ */
+function renderGrandRevealWaiting(){
+  app.innerHTML = `
+    <div class="fade-in pt-16 text-center">
+      ${headerBar()}
+      <div class="panel p-8 mt-10">
+        <p class="font-display text-xl mb-2">🎉 見證奇蹟的時刻</p>
+        <p class="text-sm text-[var(--text-dim)]">請留意大螢幕，答案即將揭曉！</p>
+      </div>
+    </div>`;
+}
+
+/* ============================================================
+   線索庫 Modal
+============================================================ */
+async function renderClueLibraryModal(){
+  const snap = await db.ref('clues').get();
+  const clues = snap.val() || { level1:['','',''], level2:['','',''], level3:['','',''] };
+  const unlocked = playerData.unlocked_clues || [];
+
+  const levels = ['level1','level2','level3'];
+  const levelLabels = { level1:'Lv.1', level2:'Lv.2', level3:'Lv.3' };
+
+  const gridHtml = levels.map(level => {
+    return `
+      <div class="mb-4">
+        <p class="font-mono text-xs text-[var(--text-dim)] mb-2">${levelLabels[level]}</p>
+        <div class="grid grid-cols-3 gap-2">
+          ${[0,1,2].map(i => {
+            const clueId = `${level}_${i}`;
+            const isUnlocked = unlocked.includes(clueId);
+            const content = clues[level] && clues[level][i] ? clues[level][i] : '';
+            const isImage = isUnlocked && /^https?:\/\//.test(content);
+            return `<div class="clue-slot ${isUnlocked?'is-unlocked':''}">
+              ${isUnlocked ? (isImage ? `<img src="${escapeHtml(content)}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">` : escapeHtml(content)) : '🔒'}
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+  }).join('');
+
+  const progress = Math.round((unlocked.length / CONFIG.game.cluesPerLevel / levels.length) * 100);
+
+  const modal = document.createElement('div');
+  modal.className = 'fixed inset-0 bg-black/70 flex items-end md:items-center justify-center z-50 p-4';
+  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+  modal.innerHTML = `
+    <div class="panel p-6 w-full max-w-md max-h-[85vh] overflow-y-auto">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="font-display font-bold text-lg">我的線索庫</h2>
+        <button onclick="this.closest('.fixed').remove()" class="text-[var(--text-dim)]">✕</button>
+      </div>
+      <p class="text-center font-mono text-sm text-[var(--accent-gold)] mb-4">${progress >= 100 ? '🎉 100% 完整解鎖！' : `已解鎖 ${unlocked.length} / 9`}</p>
+      ${gridHtml}
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+/* ============================================================
+   啟動
+============================================================ */
+boot();
+</script>
+</body>
+</html>
