@@ -503,6 +503,13 @@
             color: #475569;
             margin-top: 0.75rem;
         }
+
+        .current-evidence-large {
+            min-height: 15rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
     </style>
 </head>
 <body>
@@ -678,13 +685,13 @@
             
             <!-- Game 2 Bingo Screen -->
             <div id="game2-bingo-screen" class="hidden phase-transition">
-                <div class="grid grid-cols-3 gap-8">
-                    <div class="col-span-2">
-                        <div id="current-bingo-phrase" class="bingo-phrase-display mb-8">
-                            <div class="text-sm text-gray-400 mb-4 font-mono">CURRENT EVIDENCE</div>
-                            <div id="bingo-phrase-text" class="tv-heading">-</div>
-                        </div>
-                        
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div id="current-bingo-phrase" class="bingo-phrase-display current-evidence-large lg:col-span-2">
+                        <div class="text-sm text-gray-400 mb-4 font-mono">CURRENT EVIDENCE</div>
+                        <div id="bingo-phrase-text" class="tv-heading">-</div>
+                    </div>
+
+                    <div class="lg:col-start-1 lg:row-start-2">
                         <h3 class="tv-subheading mb-6 font-mono">PROGRESS TRACKING</h3>
                         <div class="grid grid-cols-2 gap-4">
                             <div class="bg-gray-800/50 p-6 rounded-lg border border-gray-700">
@@ -706,15 +713,17 @@
                         </div>
                     </div>
                     
-                    <div>
-                        <h3 class="tv-subheading mb-6 font-mono">TOP 10</h3>
-                        <div id="bingo-top10" class="space-y-3">
-                            <!-- Top 10 will be loaded here -->
-                        </div>
-                        
-                        <h3 class="tv-subheading mb-6 mt-8 font-mono">DRAW HISTORY</h3>
+                    <div class="lg:col-start-2 lg:row-start-2">
+                        <h3 class="tv-subheading mb-6 font-mono">DRAW HISTORY</h3>
                         <div id="bingo-history" class="space-y-2 max-h-96 overflow-y-auto">
                             <!-- History will be loaded here -->
+                        </div>
+                    </div>
+
+                    <div class="lg:col-start-3 lg:row-start-1 lg:row-span-2">
+                        <h3 class="tv-subheading mb-6 font-mono">BINGO RANKING</h3>
+                        <div id="bingo-top10" class="space-y-3">
+                            <!-- Bingo ranking will be loaded here -->
                         </div>
                     </div>
                 </div>
@@ -724,9 +733,13 @@
             <div id="game2-settle-screen" class="hidden phase-transition">
                 <div class="max-w-4xl mx-auto text-center">
                     <h2 class="tv-heading mb-8 font-mono text-orange-500">EVIDENCE COLLECTION COMPLETE</h2>
-                    <div class="grid grid-cols-3 gap-8 mb-12">
+                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
                         <div class="bg-gray-800/50 p-8 rounded-lg border border-gray-700">
-                            <div class="text-sm text-gray-400 mb-2 font-mono">COMPLETED</div>
+                            <div class="text-sm text-gray-400 mb-2 font-mono">TOTAL PLAYERS</div>
+                            <div id="bingo-total-players" class="tv-heading">0</div>
+                        </div>
+                        <div class="bg-gray-800/50 p-8 rounded-lg border border-gray-700">
+                            <div class="text-sm text-gray-400 mb-2 font-mono">2-LINE</div>
                             <div id="bingo-completed-count" class="tv-heading">0</div>
                         </div>
                         <div class="bg-gray-800/50 p-8 rounded-lg border border-gray-700">
@@ -737,6 +750,11 @@
                             <div class="text-sm text-gray-400 mb-2 font-mono">0-LINE</div>
                             <div id="bingo-zero-line-count" class="tv-heading">0</div>
                         </div>
+                    </div>
+
+                    <h3 class="tv-subheading mb-6">FINAL RANKINGS</h3>
+                    <div id="bingo-final-rankings" class="max-w-2xl mx-auto space-y-3 text-left">
+                        <!-- Bingo rankings will be loaded here -->
                     </div>
                 </div>
             </div>
@@ -1121,7 +1139,7 @@
         // Track each player's previous leaderboard position so we can show a
         // ▲/▼ arrow when their rank changes - the FLIP slide animation alone is
         // subtle from across a room, an arrow makes the change unmistakable.
-        const previousRanks = { group: {}, common: {} };
+        const previousRanks = { group: {}, common: {}, bingo: {}, bingoSettlement: {} };
         
         function rankChangeIndicator(boardKey, playerId, currentRank) {
             const previousRank = previousRanks[boardKey][playerId];
@@ -1363,33 +1381,53 @@
         function isNearLine(markedCells, targetLines) {
             return window.GenderRevealUtils.isNearLine(markedCells, targetLines);
         }
+
+        function getBingoProgressInfo(player) {
+            const markedCells = player.marked_cells || [];
+            const lines = window.GenderRevealUtils.calculateBingoLines(markedCells);
+            const nearOne = lines === 0 && isNearLine(markedCells, 1);
+            const nearTwo = lines === 1 && isNearLine(markedCells, 2);
+
+            return {
+                progressRank: lines >= 2 ? 4 : nearTwo ? 3 : lines === 1 ? 2 : nearOne ? 1 : 0,
+                progressLabel: lines >= 2
+                    ? '已連兩線'
+                    : nearTwo
+                        ? '即將連兩線'
+                        : lines === 1
+                            ? '已連一線'
+                            : nearOne
+                                ? '即將連一線'
+                                : '未連一線'
+            };
+        }
+
+        function getBingoRankedPlayers() {
+            return Object.values(players)
+                .map(player => ({ player, ...getBingoProgressInfo(player) }))
+                .sort((a, b) => b.progressRank - a.progressRank
+                    || (b.player.score || 0) - (a.player.score || 0)
+                    || String(a.player.name).localeCompare(String(b.player.name)));
+        }
         
         function updateBingoTop10() {
-            const top10 = document.getElementById('bingo-top10');
-            
-            const completedPlayers = Object.values(players)
-                .filter(p => (p.bingo_lines || 0) >= 2)
-                .sort((a, b) => (a.bingo_completed_at || 0) - (b.bingo_completed_at || 0))
-                .slice(0, 10);
-            
-            if (completedPlayers.length === 0) {
-                top10.innerHTML = '<div class="text-sm text-gray-400">No completions yet</div>';
-                return;
-            }
-            
-            animateLeaderboardUpdate(top10, () => {
-                top10.innerHTML = '';
-                completedPlayers.forEach((player, index) => {
+            const leaderboard = document.getElementById('bingo-top10');
+            const rankedPlayers = getBingoRankedPlayers();
+
+            animateLeaderboardUpdate(leaderboard, () => {
+                leaderboard.innerHTML = '';
+                rankedPlayers.forEach(({ player, progressLabel }, index) => {
+                    const arrow = rankChangeIndicator('bingo', player.id, index);
                     const div = document.createElement('div');
                     div.dataset.playerId = player.id;
                     div.className = `leaderboard-item rank-${Math.min(index + 1, 3)} p-3`;
                     div.innerHTML = `
-                        <div class="flex justify-between items-center">
-                            <span class="text-sm">${index + 1}. ${window.GenderRevealUtils.escapeHtml(player.name)}</span>
-                            <span class="text-xs font-mono">${window.GenderRevealUtils.formatTimestamp(player.bingo_completed_at)}</span>
+                        <div class="flex justify-between items-center gap-3">
+                            <span class="text-sm min-w-0 truncate">${index + 1}. ${window.GenderRevealUtils.escapeHtml(player.name)} ${arrow}</span>
+                            <span class="text-xs font-mono text-right whitespace-nowrap">${progressLabel}</span>
                         </div>
                     `;
-                    top10.appendChild(div);
+                    leaderboard.appendChild(div);
                 });
             });
         }
@@ -1422,9 +1460,29 @@
                 else zeroLine++;
             });
             
+            document.getElementById('bingo-total-players').textContent = Object.keys(players).length;
             document.getElementById('bingo-completed-count').textContent = completed;
             document.getElementById('bingo-one-line-count').textContent = oneLine;
             document.getElementById('bingo-zero-line-count').textContent = zeroLine;
+
+            const rankings = document.getElementById('bingo-final-rankings');
+            const rankedPlayers = getBingoRankedPlayers();
+            animateLeaderboardUpdate(rankings, () => {
+                rankings.innerHTML = '';
+                rankedPlayers.forEach(({ player, progressLabel }, index) => {
+                    const arrow = rankChangeIndicator('bingoSettlement', player.id, index);
+                    const div = document.createElement('div');
+                    div.dataset.playerId = player.id;
+                    div.className = `leaderboard-item rank-${Math.min(index + 1, 3)} p-4`;
+                    div.innerHTML = `
+                        <div class="flex justify-between items-center gap-3">
+                            <span class="tv-body min-w-0 truncate">${index + 1}. ${window.GenderRevealUtils.escapeHtml(player.name)} ${arrow}</span>
+                            <span class="text-sm font-mono text-right whitespace-nowrap">${progressLabel}</span>
+                        </div>
+                    `;
+                    rankings.appendChild(div);
+                });
+            });
         }
         
         function updateGame3Team() {
