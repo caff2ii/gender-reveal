@@ -113,12 +113,25 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%) rotate(-15deg);
-            font-size: 24px;
+            font-size: 20px;
             font-weight: 700;
-            color: rgba(220, 38, 38, 0.3);
-            border: 3px solid rgba(220, 38, 38, 0.3);
-            padding: 10px 20px;
+            color: rgba(220, 38, 38, 0.55);
+            border: 2px solid rgba(220, 38, 38, 0.55);
+            padding: 6px 16px;
             pointer-events: none;
+            white-space: nowrap;
+        }
+        
+        /* Evidence library clue images: keep them a reasonable, sharp size instead of stretching full-width */
+        .clue-image {
+            display: block;
+            max-width: 100%;
+            max-height: 220px;
+            width: auto;
+            margin: 0 auto;
+            object-fit: contain;
+            cursor: zoom-in;
+            image-rendering: -webkit-optimize-contrast;
         }
         
         /* Bingo cell */
@@ -1561,17 +1574,18 @@
                     const isUnlocked = unlockedClues.includes(clueId);
                     
                     const div = document.createElement('div');
-                    div.className = `p-3 rounded ${isUnlocked ? 'bg-gray-700' : 'bg-gray-800 classified'}`;
+                    div.className = `p-3 rounded ${isUnlocked ? 'bg-gray-700 text-gray-100' : 'bg-gray-800 text-gray-400 classified'}`;
                     
                     if (isUnlocked) {
                         const isImage = clue.startsWith('http');
                         if (isImage) {
-                            div.innerHTML = `<img src="${clue}" alt="Clue" class="w-full rounded">`;
+                            div.innerHTML = `<img src="${clue}" alt="Clue" class="clue-image rounded" onclick="window.open('${clue}', '_blank')">`;
                         } else {
                             div.textContent = clue;
                         }
                     } else {
                         div.textContent = 'LOCKED';
+                        div.classList.add('font-mono', 'text-center', 'tracking-widest');
                     }
                     
                     container.appendChild(div);
