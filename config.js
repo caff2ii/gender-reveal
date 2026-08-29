@@ -152,6 +152,7 @@ window.CONFIG = {
       bingo: "",
       countdown: "",
       revealHit: "",
+      confetti: "",
       fireworks: ""
     }
   },

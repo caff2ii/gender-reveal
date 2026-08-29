@@ -427,6 +427,7 @@
                             <div class="form-group"><label class="form-label">BINGO</label><input id="audio-sfx-bingo" class="form-input" type="url" placeholder="https://..."></div>
                             <div class="form-group"><label class="form-label">COUNTDOWN</label><input id="audio-sfx-countdown" class="form-input" type="url" placeholder="https://..."></div>
                             <div class="form-group"><label class="form-label">REVEAL HIT</label><input id="audio-sfx-reveal-hit" class="form-input" type="url" placeholder="https://..."></div>
+                            <div class="form-group"><label class="form-label">CONFETTI</label><input id="audio-sfx-confetti" class="form-input" type="url" placeholder="https://..."></div>
                             <div class="form-group"><label class="form-label">FIREWORKS</label><input id="audio-sfx-fireworks" class="form-input" type="url" placeholder="https://..."></div>
                         </div>
                         <button id="save-audio-btn" class="btn btn-primary">SAVE AUDIO SETTINGS</button>
@@ -689,7 +690,7 @@
             game3: 'audio-stage-game3',
             finalReveal: 'audio-stage-final-reveal'
         };
-        const audioSfxFields = ['button', 'correct', 'wrong', 'bingo', 'countdown', 'revealHit', 'fireworks'];
+        const audioSfxFields = ['button', 'correct', 'wrong', 'bingo', 'countdown', 'revealHit', 'confetti', 'fireworks'];
 
         function loadAudioSettings() {
             database.ref('sound_config').once('value', (snapshot) => {

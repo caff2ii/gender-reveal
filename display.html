@@ -2053,80 +2053,47 @@
             }
         }
 
-        function playRevealBuildSound() {
+        function playConfettiBurstSound() {
+            if (playConfiguredSfx('confetti')) return;
             if (isMuted) return;
             try {
                 initRevealAudioEngine();
                 const startTime = revealAudioCtx.currentTime;
-                const oscillator = revealAudioCtx.createOscillator();
+                const bufferSize = revealAudioCtx.sampleRate * 0.28;
+                const buffer = revealAudioCtx.createBuffer(1, bufferSize, revealAudioCtx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let index = 0; index < bufferSize; index++) {
+                    data[index] = (Math.random() * 2 - 1) * (1 - index / bufferSize);
+                }
+
+                const noise = revealAudioCtx.createBufferSource();
+                const filter = revealAudioCtx.createBiquadFilter();
                 const gain = revealAudioCtx.createGain();
-                oscillator.type = 'triangle';
-                oscillator.frequency.setValueAtTime(70, startTime);
-                oscillator.frequency.exponentialRampToValueAtTime(210, startTime + 1.8);
+                noise.buffer = buffer;
+                filter.type = 'bandpass';
+                filter.frequency.setValueAtTime(1800, startTime);
+                filter.frequency.exponentialRampToValueAtTime(500, startTime + 0.28);
+                filter.Q.setValueAtTime(0.8, startTime);
                 gain.gain.setValueAtTime(0.001, startTime);
-                gain.gain.exponentialRampToValueAtTime(0.16, startTime + 1.2);
-                gain.gain.exponentialRampToValueAtTime(0.001, startTime + 1.8);
-                oscillator.connect(gain);
+                gain.gain.exponentialRampToValueAtTime(0.24, startTime + 0.025);
+                gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.28);
+                noise.connect(filter);
+                filter.connect(gain);
                 gain.connect(revealAudioCtx.destination);
-                oscillator.start(startTime);
-                oscillator.stop(startTime + 1.8);
+                noise.start(startTime);
+                noise.stop(startTime + 0.28);
             } catch (error) {
-                console.warn('Reveal build sound unavailable:', error);
+                console.warn('Confetti burst sound unavailable:', error);
             }
         }
 
-        function playRevealWhoosh() {
-            if (isMuted) return;
-            try {
-                initRevealAudioEngine();
-                const startTime = revealAudioCtx.currentTime;
-                const oscillator = revealAudioCtx.createOscillator();
-                const gain = revealAudioCtx.createGain();
-                oscillator.type = 'sawtooth';
-                oscillator.frequency.setValueAtTime(180, startTime);
-                oscillator.frequency.exponentialRampToValueAtTime(900, startTime + 0.45);
-                gain.gain.setValueAtTime(0.001, startTime);
-                gain.gain.exponentialRampToValueAtTime(0.22, startTime + 0.12);
-                gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.55);
-                oscillator.connect(gain);
-                gain.connect(revealAudioCtx.destination);
-                oscillator.start(startTime);
-                oscillator.stop(startTime + 0.55);
-            } catch (error) {
-                console.warn('Reveal whoosh unavailable:', error);
-            }
-        }
-
-        function playRevealFanfare() {
-            if (isMuted) return;
-            try {
-                initRevealAudioEngine();
-                const startTime = revealAudioCtx.currentTime;
-                const notes = [523.25, 659.25, 783.99, 1046.5];
-                notes.forEach((frequency, index) => {
-                    const noteStart = startTime + index * 0.16;
-                    const oscillator = revealAudioCtx.createOscillator();
-                    const gain = revealAudioCtx.createGain();
-                    oscillator.type = 'sine';
-                    oscillator.frequency.setValueAtTime(frequency, noteStart);
-                    gain.gain.setValueAtTime(0.001, noteStart);
-                    gain.gain.exponentialRampToValueAtTime(0.18, noteStart + 0.03);
-                    gain.gain.exponentialRampToValueAtTime(0.001, noteStart + 0.65);
-                    oscillator.connect(gain);
-                    gain.connect(revealAudioCtx.destination);
-                    oscillator.start(noteStart);
-                    oscillator.stop(noteStart + 0.65);
-                });
-            } catch (error) {
-                console.warn('Reveal fanfare unavailable:', error);
-            }
-        }
-        
         function launchSideCannons(mainColor, accentColor) {
             if (!revealConfetti) {
                 console.warn('Reveal confetti library is unavailable.');
                 return;
             }
+
+            playConfettiBurstSound();
 
             const duration = 6 * 1000;
             const end = Date.now() + duration;
@@ -2294,7 +2261,6 @@
         function startRevealProcess(gender) {
             cleanRevealScreen();
             playEpicBGM();
-            playRevealBuildSound();
             
             spawnVSIcons();
             
@@ -2388,7 +2354,6 @@
                     onStart: () => {
                         revealScreenEl.classList.add(isGirl ? 'bg-girl-win' : 'bg-boy-win');
                         unifyIconColors('#FFFFFF');
-                        playRevealWhoosh();
                         w3.style.filter = 'url(#motion-blur-filter)';
                         if (blurVal) blurVal.setAttribute('stdDeviation', '40, 0');
                         
@@ -2406,7 +2371,6 @@
                         w3.style.filter = 'none';
                         w3.classList.add('animate__animated', 'animate__pulse', 'animate__infinite');
                         launchSideCannons(mainColor, accentColor);
-                        playRevealFanfare();
                         showRevealStats(gender);
                     }
                 },
