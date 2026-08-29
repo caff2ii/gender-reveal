@@ -1875,6 +1875,7 @@
         let revealCountTimer = null;
         let revealAudioCtx = null;
         const epicBgmEl = document.getElementById('epic-bgm');
+        const BGM_VOLUME = 0.25;
         let bgmFadeInterval = null;
         let bgmTransitionId = 0;
         let activeBgmStage = '';
@@ -1929,7 +1930,7 @@
         function switchBgmUrl(url) {
             const transitionId = ++bgmTransitionId;
             const fadeDuration = 700;
-            const startVolume = epicBgmEl.volume || 0.7;
+            const startVolume = epicBgmEl.volume || BGM_VOLUME;
 
             if (bgmFadeInterval) clearInterval(bgmFadeInterval);
 
@@ -1970,12 +1971,12 @@
             if (!epicBgmEl || !epicBgmEl.src) return;
             const stepMs = 50;
             const steps = durationMs / stepMs;
-            const volumeStep = 0.7 / steps;
+            const volumeStep = BGM_VOLUME / steps;
             if (bgmFadeInterval) clearInterval(bgmFadeInterval);
 
             bgmFadeInterval = setInterval(() => {
-                epicBgmEl.volume = Math.min(0.7, epicBgmEl.volume + volumeStep);
-                if (epicBgmEl.volume >= 0.7) {
+                epicBgmEl.volume = Math.min(BGM_VOLUME, epicBgmEl.volume + volumeStep);
+                if (epicBgmEl.volume >= BGM_VOLUME) {
                     clearInterval(bgmFadeInterval);
                     bgmFadeInterval = null;
                 }
@@ -2003,7 +2004,7 @@
                     return;
                 }
                 epicBgmEl.loop = true;
-                epicBgmEl.volume = 0.7;
+                epicBgmEl.volume = BGM_VOLUME;
                 if (epicBgmEl.paused) {
                     epicBgmEl.play().catch(e => console.warn('Reveal BGM unavailable:', e));
                 }
