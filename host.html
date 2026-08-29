@@ -941,15 +941,19 @@
         function distributeGame3Rewards(winningTeam) {
             Object.keys(players).forEach(playerId => {
                 const player = players[playerId];
+                const updatedPlayer = { ...player };
+                window.GenderRevealUtils.giveClue(
+                    updatedPlayer,
+                    window.CONFIG.game3.participationReward
+                );
                 if (player.team === winningTeam) {
-                    // Give Lv3 + Lv2 clues
-                    const updatedPlayer = { ...player };
-                    window.GenderRevealUtils.giveClue(updatedPlayer, 'level3');
-                    window.GenderRevealUtils.giveClue(updatedPlayer, 'level2');
-                    database.ref(`${window.CONFIG.dbPaths.players}/${playerId}`).update({
-                        unlocked_clues: updatedPlayer.unlocked_clues
+                    window.CONFIG.game3.winnerRewards.forEach(level => {
+                        window.GenderRevealUtils.giveClue(updatedPlayer, level);
                     });
                 }
+                database.ref(`${window.CONFIG.dbPaths.players}/${playerId}`).update({
+                    unlocked_clues: updatedPlayer.unlocked_clues
+                });
             });
         }
         
@@ -965,16 +969,14 @@
             ranked.forEach((player, idx) => {
                 const rank = idx + 1;
                 const updatedPlayer = { ...player };
-                // Everyone starts with Lv1. The top 10 earn an additional Lv2.
                 window.GenderRevealUtils.giveClue(
                     updatedPlayer,
                     window.CONFIG.game1.participationReward
                 );
                 if (rank <= 10) {
-                    window.GenderRevealUtils.giveClue(
-                        updatedPlayer,
-                        window.CONFIG.game1.top10BonusReward
-                    );
+                    window.CONFIG.game1.top10BonusRewards.forEach(level => {
+                        window.GenderRevealUtils.giveClue(updatedPlayer, level);
+                    });
                 }
                 // Flattened path keys merge only this field - a nested object value here
                 // would make Firebase REPLACE each player's entire record instead of merging.
@@ -1004,15 +1006,18 @@
                 const updatedPlayer = { ...player };
                 const lines = player.bingo_lines || 0;
                 
+                window.GenderRevealUtils.giveClue(
+                    updatedPlayer,
+                    window.CONFIG.game2.bingoParticipationReward
+                );
                 if (topIds.has(playerId)) {
-                    window.GenderRevealUtils.giveClue(updatedPlayer, window.CONFIG.game2.bingoTop10Reward);
+                    window.CONFIG.game2.bingoTop10Rewards.forEach(level => {
+                        window.GenderRevealUtils.giveClue(updatedPlayer, level);
+                    });
                 } else if (lines >= 1) {
-                    // One line (or more but not top 10) - the one-line reward list
                     (window.CONFIG.game2.bingoOneLineReward || ['level2']).forEach(level => {
                         window.GenderRevealUtils.giveClue(updatedPlayer, level);
                     });
-                } else {
-                    window.GenderRevealUtils.giveClue(updatedPlayer, window.CONFIG.game2.bingoZeroLineReward);
                 }
                 
                 updates[`${playerId}/unlocked_clues`] = updatedPlayer.unlocked_clues;

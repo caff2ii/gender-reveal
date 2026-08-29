@@ -71,7 +71,7 @@ window.CONFIG = {
     // overridable live by the host and synced to players/display via game_state.option_reveal_step_ms
     optionRevealStepMs: 500,
     participationReward: "level1",
-    top10BonusReward: "level2"
+    top10BonusRewards: ["level2", "level3"]
   },
 
   // Game 2 Settings
@@ -79,9 +79,9 @@ window.CONFIG = {
     bingoBoardSize: 9, // 3x3
     bingoLinesToComplete: 2,
     bingoTop10Cutoff: 10,
-    bingoTop10Reward: "level3",
-    bingoOneLineReward: ["level2"],
-    bingoZeroLineReward: "level1"
+    bingoParticipationReward: "level1",
+    bingoTop10Rewards: ["level2", "level3"],
+    bingoOneLineReward: ["level2"]
   },
 
   // Clue Settings
@@ -95,7 +95,8 @@ window.CONFIG = {
 
   // Game 3 Settings
   game3: {
-    winnerReward: ["level3", "level2"]
+    participationReward: "level1",
+    winnerRewards: ["level2", "level3"]
   },
 
   // Final Choice Settings

@@ -105,9 +105,11 @@ const firebaseConfig = {
 
 ### Clue Rewards
 
-- **Game 1**: Everyone → Level 1, Top 10 → an additional Level 2
-- **Game 2**: Top 10 (2 lines) → Level 3, 1 line → Level 2, 0 lines → Level 1
-- **Game 3**: Winning team → Level 3+2
+- **Game 1**: Everyone → Level 1; Top 10 → additional Level 2+3
+- **Game 2**: Everyone → Level 1; Top 10 (2 lines) → additional Level 2+3; other players with 1+ line → additional Level 2
+- **Game 3**: Everyone → Level 1; winning team → additional Level 2+3
+
+The best-performing players can therefore collect all 9 clues: three Level 1, three Level 2, and three Level 3 clues.
 
 ### Clue Overflow Logic
 
