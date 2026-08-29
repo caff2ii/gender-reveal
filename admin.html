@@ -309,6 +309,7 @@
                     <button class="nav-tab" data-panel="common-quiz">COMMON QUIZ</button>
                     <button class="nav-tab" data-panel="bingo">BINGO PHRASES</button>
                     <button class="nav-tab" data-panel="clues">CLUES</button>
+                    <button class="nav-tab" data-panel="audio">AUDIO</button>
                 </div>
                 
                 <!-- Group Quiz Panel -->
@@ -397,6 +398,38 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Audio Panel -->
+                <div id="audio-panel" class="content-panel">
+                    <div class="admin-card p-6">
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-xl font-bold">AUDIO SETTINGS</h2>
+                            <span id="audio-save-status" class="text-sm text-gray-400"></span>
+                        </div>
+                        <p class="text-gray-400 mb-6">Use direct audio file URLs. Leave a field empty to keep the built-in fallback where available.</p>
+
+                        <h3 class="font-bold mb-4 text-orange-500">BACKGROUND MUSIC BY STAGE</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                            <div class="form-group"><label class="form-label">ONBOARDING + STORY</label><input id="audio-stage-onboarding-story" class="form-input" type="url" placeholder="https://..."></div>
+                            <div class="form-group"><label class="form-label">GAME 1</label><input id="audio-stage-game1" class="form-input" type="url" placeholder="https://..."></div>
+                            <div class="form-group"><label class="form-label">GAME 2</label><input id="audio-stage-game2" class="form-input" type="url" placeholder="https://..."></div>
+                            <div class="form-group"><label class="form-label">GAME 3</label><input id="audio-stage-game3" class="form-input" type="url" placeholder="https://..."></div>
+                            <div class="form-group md:col-span-2"><label class="form-label">FINAL CHOICE + REVEAL</label><input id="audio-stage-final-reveal" class="form-input" type="url" placeholder="https://..."></div>
+                        </div>
+
+                        <h3 class="font-bold mb-4 text-orange-500">SOUND EFFECTS</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                            <div class="form-group"><label class="form-label">BUTTON</label><input id="audio-sfx-button" class="form-input" type="url" placeholder="https://..."></div>
+                            <div class="form-group"><label class="form-label">CORRECT ANSWER</label><input id="audio-sfx-correct" class="form-input" type="url" placeholder="https://..."></div>
+                            <div class="form-group"><label class="form-label">WRONG ANSWER</label><input id="audio-sfx-wrong" class="form-input" type="url" placeholder="https://..."></div>
+                            <div class="form-group"><label class="form-label">BINGO</label><input id="audio-sfx-bingo" class="form-input" type="url" placeholder="https://..."></div>
+                            <div class="form-group"><label class="form-label">COUNTDOWN</label><input id="audio-sfx-countdown" class="form-input" type="url" placeholder="https://..."></div>
+                            <div class="form-group"><label class="form-label">REVEAL HIT</label><input id="audio-sfx-reveal-hit" class="form-input" type="url" placeholder="https://..."></div>
+                            <div class="form-group"><label class="form-label">FIREWORKS</label><input id="audio-sfx-fireworks" class="form-input" type="url" placeholder="https://..."></div>
+                        </div>
+                        <button id="save-audio-btn" class="btn btn-primary">SAVE AUDIO SETTINGS</button>
                     </div>
                 </div>
             </div>
@@ -516,6 +549,7 @@
         const connectionStatus = document.getElementById('connection-status');
         const connectionText = document.getElementById('connection-text');
         const groupSelect = document.getElementById('group-select');
+        const audioSaveStatus = document.getElementById('audio-save-status');
         
         // Modal elements
         const questionModal = document.getElementById('question-modal');
@@ -642,7 +676,55 @@
                     loadClues();
                     setupClueButtons();
                     break;
+                case 'audio':
+                    loadAudioSettings();
+                    break;
             }
+        }
+
+        const audioStageFields = {
+            onboardingStory: 'audio-stage-onboarding-story',
+            game1: 'audio-stage-game1',
+            game2: 'audio-stage-game2',
+            game3: 'audio-stage-game3',
+            finalReveal: 'audio-stage-final-reveal'
+        };
+        const audioSfxFields = ['button', 'correct', 'wrong', 'bingo', 'countdown', 'revealHit', 'fireworks'];
+
+        function loadAudioSettings() {
+            database.ref('sound_config').once('value', (snapshot) => {
+                const saved = snapshot.val() || {};
+                const stages = { ...((window.CONFIG.sound && window.CONFIG.sound.stages) || {}), ...(saved.stages || {}) };
+                const sfx = { ...((window.CONFIG.sound && window.CONFIG.sound.sfx) || {}), ...(saved.sfx || {}) };
+
+                Object.entries(audioStageFields).forEach(([key, id]) => {
+                    document.getElementById(id).value = stages[key] || '';
+                });
+                audioSfxFields.forEach(key => {
+                    const id = `audio-sfx-${key.replace(/[A-Z]/g, match => '-' + match.toLowerCase())}`;
+                    document.getElementById(id).value = sfx[key] || '';
+                });
+                audioSaveStatus.textContent = 'Loaded';
+            });
+        }
+
+        function saveAudioSettings() {
+            const stages = {};
+            Object.entries(audioStageFields).forEach(([key, id]) => {
+                stages[key] = document.getElementById(id).value.trim();
+            });
+            const sfx = {};
+            audioSfxFields.forEach(key => {
+                const id = `audio-sfx-${key.replace(/[A-Z]/g, match => '-' + match.toLowerCase())}`;
+                sfx[key] = document.getElementById(id).value.trim();
+            });
+
+            database.ref('sound_config').set({ stages, sfx }).then(() => {
+                audioSaveStatus.textContent = 'Saved';
+            }).catch(error => {
+                console.error('Audio settings save failed:', error);
+                audioSaveStatus.textContent = 'Save failed';
+            });
         }
         
         // Group Quiz Functions
@@ -1143,6 +1225,8 @@
                 editingClue = null;
             });
         });
+
+        document.getElementById('save-audio-btn').addEventListener('click', saveAudioSettings);
         
         cancelClueBtn.addEventListener('click', () => {
             clueModal.classList.add('hidden');

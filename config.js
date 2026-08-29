@@ -138,8 +138,13 @@ window.CONFIG = {
 
   // Sound Configuration
   sound: {
-    bgmAmbient: "",
-    bgmTense: "",
+    stages: {
+      onboardingStory: "",
+      game1: "",
+      game2: "",
+      game3: "",
+      finalReveal: "https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a731ae.mp3"
+    },
     sfx: {
       button: "",
       correct: "",

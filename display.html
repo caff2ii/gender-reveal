@@ -1190,6 +1190,7 @@
         let groupQuizQuestions = [];
         let commonQuizQuestions = [];
         let isMuted = false;
+        let soundConfig = window.CONFIG.sound || { stages: {}, sfx: {} };
         
         // DOM Elements
         const loadingEl = document.getElementById('loading');
@@ -1205,6 +1206,7 @@
             setupGameStateListener();
             setupPlayersListener();
             setupQuestionsListener();
+            setupSoundConfigListener();
             
             // Setup QR code
             setupQRCode();
@@ -1251,6 +1253,7 @@
                     drawn_bingo_phrases: []
                 };
                 currentPhase = gameState.current_phase || 'ONBOARDING';
+                setStageBgm(currentPhase);
                 updateDisplay();
             });
         }
@@ -1267,6 +1270,17 @@
             database.ref('questions').on('value', (snapshot) => {
                 questions = snapshot.val() || { group_quiz: {}, common_quiz: {} };
                 loadQuestions();
+            });
+        }
+
+        function setupSoundConfigListener() {
+            database.ref('sound_config').on('value', (snapshot) => {
+                const saved = snapshot.val() || {};
+                soundConfig = {
+                    stages: { ...((window.CONFIG.sound && window.CONFIG.sound.stages) || {}), ...(saved.stages || {}) },
+                    sfx: { ...((window.CONFIG.sound && window.CONFIG.sound.sfx) || {}), ...(saved.sfx || {}) }
+                };
+                setStageBgm(currentPhase);
             });
         }
         
@@ -1287,6 +1301,7 @@
         function unlockRevealAudio() {
             try {
                 initRevealAudioEngine();
+                setStageBgm(currentPhase);
             } catch (error) {
                 console.warn('Reveal audio is unavailable:', error);
             }
@@ -1301,6 +1316,7 @@
             if (typeof Howl !== 'undefined') {
                 Howler.mute(isMuted);
             }
+            if (epicBgmEl) epicBgmEl.muted = isMuted;
         }
         
         function updateDisplay() {
@@ -1860,6 +1876,8 @@
         let revealAudioCtx = null;
         const epicBgmEl = document.getElementById('epic-bgm');
         let bgmFadeInterval = null;
+        let activeBgmStage = '';
+        let activeBgmUrl = '';
         let revealConfettiAnimId = null;
         let fireworksCanvas, fireworksCtx;
         let fireworksParticles = [];
@@ -1883,11 +1901,50 @@
                 revealAudioCtx.resume().catch(error => console.warn('Reveal audio resume blocked:', error));
             }
         }
+
+        function getAudioStage(phase) {
+            if (phase === 'ONBOARDING' || phase === 'BACKGROUND_STORY') return 'onboardingStory';
+            if (phase.startsWith('GAME1_')) return 'game1';
+            if (phase.startsWith('GAME2_')) return 'game2';
+            if (phase.startsWith('GAME3_')) return 'game3';
+            return 'finalReveal';
+        }
+
+        function setStageBgm(phase) {
+            if (!epicBgmEl) return;
+            const stage = getAudioStage(phase);
+            const url = (soundConfig.stages && soundConfig.stages[stage]) || '';
+            if (stage === activeBgmStage && url === activeBgmUrl) return;
+
+            activeBgmStage = stage;
+            activeBgmUrl = url;
+            epicBgmEl.pause();
+            if (!url) return;
+
+            epicBgmEl.src = url;
+            epicBgmEl.loop = true;
+            epicBgmEl.volume = 0.7;
+            epicBgmEl.play().catch(error => console.warn('Stage BGM unavailable:', error));
+        }
+
+        function playConfiguredSfx(key) {
+            const url = soundConfig.sfx && soundConfig.sfx[key];
+            if (!url) return false;
+            if (isMuted) return true;
+
+            const sound = new Audio(url);
+            sound.volume = 0.8;
+            sound.play().catch(error => console.warn(`SFX unavailable (${key}):`, error));
+            return true;
+        }
         
         function playEpicBGM() {
             try {
                 initRevealAudioEngine();
                 if (bgmFadeInterval) clearInterval(bgmFadeInterval);
+                const revealUrl = (soundConfig.stages && soundConfig.stages.finalReveal) || '';
+                if (revealUrl && epicBgmEl.src !== revealUrl) epicBgmEl.src = revealUrl;
+                epicBgmEl.loop = true;
                 epicBgmEl.volume = 0.7;
                 epicBgmEl.currentTime = 0;
                 epicBgmEl.play().catch(e => console.warn('Reveal BGM unavailable:', e));
@@ -1917,6 +1974,7 @@
         }
         
         function playModernTickSound() {
+            if (playConfiguredSfx('countdown')) return;
             try {
                 initRevealAudioEngine();
                 const osc = revealAudioCtx.createOscillator();
@@ -1936,6 +1994,7 @@
         }
         
         function playModernImpactSound() {
+            if (playConfiguredSfx('revealHit')) return;
             try {
                 initRevealAudioEngine();
                 const osc = revealAudioCtx.createOscillator();
