@@ -1914,7 +1914,7 @@
             if (!epicBgmEl) return;
             const stage = getAudioStage(phase);
             const url = (soundConfig.stages && soundConfig.stages[stage]) || '';
-            if (stage === activeBgmStage && url === activeBgmUrl) return;
+            if (stage === activeBgmStage && url === activeBgmUrl && !epicBgmEl.paused) return;
 
             activeBgmStage = stage;
             activeBgmUrl = url;
