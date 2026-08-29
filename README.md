@@ -105,8 +105,8 @@ const firebaseConfig = {
 
 ### Clue Rewards
 
-- **Game 1**: Rank 1-10 → Level 3, Rank 11-20 → Level 2, Rank 21+ → Level 1
-- **Game 2**: Top 10 (2 lines) → Level 3, 1 line → Level 1+2, 0 lines → Level 1
+- **Game 1**: Everyone → Level 1, Top 10 → an additional Level 2
+- **Game 2**: Top 10 (2 lines) → Level 3, 1 line → Level 2, 0 lines → Level 1
 - **Game 3**: Winning team → Level 3+2
 
 ### Clue Overflow Logic

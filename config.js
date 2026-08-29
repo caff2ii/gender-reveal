@@ -70,11 +70,8 @@ window.CONFIG = {
     // Default delay (ms) between each option appearing when options are revealed -
     // overridable live by the host and synced to players/display via game_state.option_reveal_step_ms
     optionRevealStepMs: 500,
-    rank1Reward: "level3",
-    rank10Reward: "level3",
-    rank11Reward: "level2",
-    rank20Reward: "level2",
-    rank21PlusReward: "level1"
+    participationReward: "level1",
+    top10BonusReward: "level2"
   },
 
   // Game 2 Settings
@@ -83,7 +80,7 @@ window.CONFIG = {
     bingoLinesToComplete: 2,
     bingoTop10Cutoff: 10,
     bingoTop10Reward: "level3",
-    bingoOneLineReward: ["level1", "level2"],
+    bingoOneLineReward: ["level2"],
     bingoZeroLineReward: "level1"
   },
 
@@ -259,13 +256,6 @@ window.GenderRevealUtils = {
     const baseScore = window.CONFIG.game1.commonQuizBaseScore;
     const bonus = Math.floor(remainingSeconds * window.CONFIG.game1.commonQuizSpeedBonusMultiplier);
     return baseScore + bonus;
-  },
-
-  // Get clue level from rank
-  getClueLevelFromRank: function(rank) {
-    if (rank <= 10) return "level3";
-    if (rank <= 20) return "level2";
-    return "level1";
   },
 
   // Check if clue level is available for player

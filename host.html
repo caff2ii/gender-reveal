@@ -964,10 +964,18 @@
             const updates = {};
             ranked.forEach((player, idx) => {
                 const rank = idx + 1;
-                // config: rank1-10 -> level3, rank11-20 -> level2, rank21+ -> level1
-                const level = window.GenderRevealUtils.getClueLevelFromRank(rank);
                 const updatedPlayer = { ...player };
-                window.GenderRevealUtils.giveClue(updatedPlayer, level);
+                // Everyone starts with Lv1. The top 10 earn an additional Lv2.
+                window.GenderRevealUtils.giveClue(
+                    updatedPlayer,
+                    window.CONFIG.game1.participationReward
+                );
+                if (rank <= 10) {
+                    window.GenderRevealUtils.giveClue(
+                        updatedPlayer,
+                        window.CONFIG.game1.top10BonusReward
+                    );
+                }
                 // Flattened path keys merge only this field - a nested object value here
                 // would make Firebase REPLACE each player's entire record instead of merging.
                 updates[`${player.id}/unlocked_clues`] = updatedPlayer.unlocked_clues;
@@ -1000,7 +1008,7 @@
                     window.GenderRevealUtils.giveClue(updatedPlayer, window.CONFIG.game2.bingoTop10Reward);
                 } else if (lines >= 1) {
                     // One line (or more but not top 10) - the one-line reward list
-                    (window.CONFIG.game2.bingoOneLineReward || ['level1', 'level2']).forEach(level => {
+                    (window.CONFIG.game2.bingoOneLineReward || ['level2']).forEach(level => {
                         window.GenderRevealUtils.giveClue(updatedPlayer, level);
                     });
                 } else {
