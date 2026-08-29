@@ -1876,6 +1876,7 @@
         let revealAudioCtx = null;
         const epicBgmEl = document.getElementById('epic-bgm');
         let bgmFadeInterval = null;
+        let bgmTransitionId = 0;
         let activeBgmStage = '';
         let activeBgmUrl = '';
         let revealConfettiAnimId = null;
@@ -1918,13 +1919,67 @@
 
             activeBgmStage = stage;
             activeBgmUrl = url;
-            epicBgmEl.pause();
-            if (!url) return;
+            if (stage === activeBgmStage && url === activeBgmUrl && epicBgmEl.src === url) {
+                if (url) epicBgmEl.play().catch(error => console.warn('Stage BGM unavailable:', error));
+                return;
+            }
+            switchBgmUrl(url);
+        }
 
-            epicBgmEl.src = url;
-            epicBgmEl.loop = true;
-            epicBgmEl.volume = 0.7;
-            epicBgmEl.play().catch(error => console.warn('Stage BGM unavailable:', error));
+        function switchBgmUrl(url) {
+            const transitionId = ++bgmTransitionId;
+            const fadeDuration = 700;
+            const startVolume = epicBgmEl.volume || 0.7;
+
+            if (bgmFadeInterval) clearInterval(bgmFadeInterval);
+
+            const finishSwitch = () => {
+                if (transitionId !== bgmTransitionId) return;
+                epicBgmEl.pause();
+                epicBgmEl.src = url;
+                epicBgmEl.loop = true;
+                epicBgmEl.volume = 0;
+
+                if (!url) return;
+                epicBgmEl.play().then(() => fadeInEpicBGM(fadeDuration))
+                    .catch(error => console.warn('Stage BGM unavailable:', error));
+            };
+
+            if (!epicBgmEl.paused && epicBgmEl.src && epicBgmEl.src !== url) {
+                const stepMs = 50;
+                const steps = fadeDuration / stepMs;
+                const volumeStep = startVolume / steps;
+                bgmFadeInterval = setInterval(() => {
+                    if (transitionId !== bgmTransitionId) {
+                        clearInterval(bgmFadeInterval);
+                        return;
+                    }
+                    epicBgmEl.volume = Math.max(0, epicBgmEl.volume - volumeStep);
+                    if (epicBgmEl.volume <= 0) {
+                        clearInterval(bgmFadeInterval);
+                        bgmFadeInterval = null;
+                        finishSwitch();
+                    }
+                }, stepMs);
+            } else {
+                finishSwitch();
+            }
+        }
+
+        function fadeInEpicBGM(durationMs = 700) {
+            if (!epicBgmEl || !epicBgmEl.src) return;
+            const stepMs = 50;
+            const steps = durationMs / stepMs;
+            const volumeStep = 0.7 / steps;
+            if (bgmFadeInterval) clearInterval(bgmFadeInterval);
+
+            bgmFadeInterval = setInterval(() => {
+                epicBgmEl.volume = Math.min(0.7, epicBgmEl.volume + volumeStep);
+                if (epicBgmEl.volume >= 0.7) {
+                    clearInterval(bgmFadeInterval);
+                    bgmFadeInterval = null;
+                }
+            }, stepMs);
         }
 
         function playConfiguredSfx(key) {
@@ -1943,34 +1998,18 @@
                 initRevealAudioEngine();
                 if (bgmFadeInterval) clearInterval(bgmFadeInterval);
                 const revealUrl = (soundConfig.stages && soundConfig.stages.finalReveal) || '';
-                if (revealUrl && epicBgmEl.src !== revealUrl) epicBgmEl.src = revealUrl;
+                if (revealUrl && epicBgmEl.src !== revealUrl) {
+                    switchBgmUrl(revealUrl);
+                    return;
+                }
                 epicBgmEl.loop = true;
                 epicBgmEl.volume = 0.7;
-                epicBgmEl.currentTime = 0;
-                epicBgmEl.play().catch(e => console.warn('Reveal BGM unavailable:', e));
+                if (epicBgmEl.paused) {
+                    epicBgmEl.play().catch(e => console.warn('Reveal BGM unavailable:', e));
+                }
             } catch (error) {
                 console.warn('Reveal BGM unavailable:', error);
             }
-        }
-        
-        function fadeOutEpicBGM(durationMs = 1500) {
-            if (!epicBgmEl) return;
-            const startVolume = epicBgmEl.volume;
-            const stepMs = 50;
-            const steps = durationMs / stepMs;
-            const volumeStep = startVolume / steps;
-            
-            if (bgmFadeInterval) clearInterval(bgmFadeInterval);
-            
-            bgmFadeInterval = setInterval(() => {
-                if (epicBgmEl.volume > volumeStep) {
-                    epicBgmEl.volume -= volumeStep;
-                } else {
-                    epicBgmEl.volume = 0;
-                    epicBgmEl.pause();
-                    clearInterval(bgmFadeInterval);
-                }
-            }, stepMs);
         }
         
         function playModernTickSound() {
@@ -2113,8 +2152,6 @@
             if (revealCountTimer) clearInterval(revealCountTimer);
             if (fireworksAnimId) cancelAnimationFrame(fireworksAnimId);
             if (revealConfettiAnimId) cancelAnimationFrame(revealConfettiAnimId);
-            fadeOutEpicBGM(300);
-            
             revealScreenEl.className = '';
             revealScreenEl.style.backgroundPosition = '50% 50%';
             
@@ -2280,8 +2317,6 @@
                     onStart: () => {
                         revealScreenEl.classList.add(isGirl ? 'bg-girl-win' : 'bg-boy-win');
                         unifyIconColors('#FFFFFF');
-                        fadeOutEpicBGM(1500);
-                        
                         w3.style.filter = 'url(#motion-blur-filter)';
                         if (blurVal) blurVal.setAttribute('stdDeviation', '40, 0');
                         
